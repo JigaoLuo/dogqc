@@ -68,5 +68,5 @@ def execTpch ( acc, num, showPlan=False ):
     compiler.compile ( "tpch" + str(num) )
     compiler.execute ()
 
-
-main()
+if __name__ == "__main__":
+    main()
