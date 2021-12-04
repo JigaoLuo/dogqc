@@ -23,7 +23,6 @@ __global__ void krnl_lineitem1(
     int* iatt5_llinenum, int* nout_result, int* oatt5_llinenum, int* oatt1_countlli) {  ///
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
-    const int THREADS_PER_BLOCK = 128;  ///  blockDim.x==128
     const int HT_SIZE = 128 * 2;  /// Allocate doubled space
     __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
     __shared__ int agg1[HT_SIZE];  ///
@@ -87,7 +86,7 @@ __global__ void krnl_lineitem1(
         int active = 0;
         while(!(flushPipeline)) {
             tid_aggregation2 = loopVar;
-            active = (loopVar < HT_SIZE);  ///
+            active = (loopVar < 6001215);  ///
             // flush pipeline if no new elements
             flushPipeline = !(__ballot_sync(ALL_LANES,active));
             if(active) {
