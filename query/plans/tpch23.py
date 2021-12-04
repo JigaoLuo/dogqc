@@ -1,9 +1,9 @@
-# select l_linenumber from lineitem group by l_linenumber
+# select l_linenumber, count(*) from lineitem group by l_linenumber
 alg.projection (
-    [ "l_linenumber"],
+    [ "l_linenumber, count_l_linenumber"],
     alg.aggregation (
         [ "l_linenumber" ],
-        [],
+        [( Reduction.COUNT, "", "count_l_linenumber" )],
         alg.scan ( "lineitem" )
     )
 )
