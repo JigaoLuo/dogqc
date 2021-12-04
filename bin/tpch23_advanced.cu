@@ -170,7 +170,7 @@ int main() {
     }
 
     agg_ht<apayl2>* d_aht2;
-    cudaMalloc((void**) &d_aht2, 12002430* sizeof(agg_ht<apayl2>) );
+    cudaMalloc((void**) &d_aht2, 12002430* sizeof(agg_ht<apayl2>) );  /// 12002430 == 2 * 6001215. Hash table factor is 2 over the cardinality of the base table.
     {
         int gridsize=920;
         int blocksize=128;
