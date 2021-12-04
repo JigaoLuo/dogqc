@@ -11,12 +11,12 @@
 #include "../dogqc/include/util.cuh"
 #include "../dogqc/include/hashing.cuh"
 struct apayl2 {
-    int att4_llinenum;
+    int att5_llinenum;
 };
 
 __global__ void krnl_lineitem1(
-    int* iatt4_llinenum, agg_ht<apayl2>* aht2) {
-    int att4_llinenum;
+    int* iatt5_llinenum, agg_ht<apayl2>* aht2, int* agg1) {
+    int att5_llinenum;
 
     int tid_lineitem1 = 0;
     unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);
@@ -29,7 +29,7 @@ __global__ void krnl_lineitem1(
         // flush pipeline if no new elements
         flushPipeline = !(__ballot_sync(ALL_LANES,active));
         if(active) {
-            att4_llinenum = iatt4_llinenum[tid_lineitem1];
+            att5_llinenum = iatt5_llinenum[tid_lineitem1];
         }
         // -------- aggregation (opId: 2) --------
         int bucket = 0;
@@ -37,20 +37,21 @@ __global__ void krnl_lineitem1(
             uint64_t hash2 = 0;
             hash2 = 0;
             if(active) {
-                hash2 = hash ( (hash2 + ((uint64_t)att4_llinenum)));
+                hash2 = hash ( (hash2 + ((uint64_t)att5_llinenum)));
             }
             apayl2 payl;
-            payl.att4_llinenum = att4_llinenum;
+            payl.att5_llinenum = att5_llinenum;
             int bucketFound = 0;
             int numLookups = 0;
             while(!(bucketFound)) {
                 bucket = hashAggregateGetBucket ( aht2, 12002430, hash2, numLookups, &(payl));
                 apayl2 probepayl = aht2[bucket].payload;
                 bucketFound = 1;
-                bucketFound &= ((payl.att4_llinenum == probepayl.att4_llinenum));
+                bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
             }
         }
         if(active) {
+            atomicAdd(&(agg1[bucket]), ((int)1));
         }
         loopVar += step;
     }
@@ -58,8 +59,9 @@ __global__ void krnl_lineitem1(
 }
 
 __global__ void krnl_aggregation2(
-    agg_ht<apayl2>* aht2, int* nout_result, int* oatt4_llinenum) {
-    int att4_llinenum;
+    agg_ht<apayl2>* aht2, int* agg1, int* nout_result, int* oatt5_llinenum, int* oatt1_countlli) {
+    int att5_llinenum;
+    int att1_countlli;
     unsigned warplane = (threadIdx.x % 32);
     unsigned prefixlanes = (0xffffffff >> (32 - warplane));
 
@@ -81,9 +83,10 @@ __global__ void krnl_aggregation2(
         }
         if(active) {
             apayl2 payl = aht2[tid_aggregation2].payload;
-            att4_llinenum = payl.att4_llinenum;
+            att5_llinenum = payl.att5_llinenum;
         }
         if(active) {
+            att1_countlli = agg1[tid_aggregation2];
         }
         // -------- projection (no code) (opId: 3) --------
         // -------- materialize (opId: 4) --------
@@ -98,7 +101,8 @@ __global__ void krnl_aggregation2(
         wp = __shfl_sync(ALL_LANES,wp,0);
         wp = (wp + __popc((writeMask & prefixlanes)));
         if(active) {
-            oatt4_llinenum[wp] = att4_llinenum;
+            oatt5_llinenum[wp] = att5_llinenum;
+            oatt1_countlli[wp] = att1_countlli;
         }
         loopVar += step;
     }
@@ -106,11 +110,12 @@ __global__ void krnl_aggregation2(
 }
 
 int main() {
-    int* iatt4_llinenum;
-    iatt4_llinenum = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber" );
+    int* iatt5_llinenum;
+    iatt5_llinenum = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber" );
 
     int nout_result;
-    std::vector < int > oatt4_llinenum(6001215);
+    std::vector < int > oatt5_llinenum(6001215);
+    std::vector < int > oatt1_countlli(6001215);
 
     // wake up gpu
     cudaDeviceSynchronize();
@@ -122,12 +127,14 @@ int main() {
         }
     }
 
-    int* d_iatt4_llinenum;
-    cudaMalloc((void**) &d_iatt4_llinenum, 6001215* sizeof(int) );
+    int* d_iatt5_llinenum;
+    cudaMalloc((void**) &d_iatt5_llinenum, 6001215* sizeof(int) );
     int* d_nout_result;
     cudaMalloc((void**) &d_nout_result, 1* sizeof(int) );
-    int* d_oatt4_llinenum;
-    cudaMalloc((void**) &d_oatt4_llinenum, 6001215* sizeof(int) );
+    int* d_oatt5_llinenum;
+    cudaMalloc((void**) &d_oatt5_llinenum, 6001215* sizeof(int) );
+    int* d_oatt1_countlli;
+    cudaMalloc((void**) &d_oatt1_countlli, 6001215* sizeof(int) );
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -161,6 +168,13 @@ int main() {
         int blocksize=128;
         initAggHT<<<gridsize, blocksize>>>(d_aht2, 12002430);
     }
+    int* d_agg1;
+    cudaMalloc((void**) &d_agg1, 12002430* sizeof(int) );
+    {
+        int gridsize=920;
+        int blocksize=128;
+        initArray<<<gridsize, blocksize>>>(d_agg1, 0, 12002430);
+    }
     {
         int gridsize=920;
         int blocksize=128;
@@ -192,7 +206,7 @@ int main() {
         fflush(stdout);
     }
 
-    cudaMemcpy( d_iatt4_llinenum, iatt4_llinenum, 6001215 * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy( d_iatt5_llinenum, iatt5_llinenum, 6001215 * sizeof(int), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -207,7 +221,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_lineitem1<<<gridsize, blocksize>>>(d_iatt4_llinenum, d_aht2);
+        krnl_lineitem1<<<gridsize, blocksize>>>(d_iatt5_llinenum, d_aht2, d_agg1);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_lineitem11 = std::clock();
@@ -223,7 +237,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_aggregation2<<<gridsize, blocksize>>>(d_aht2, d_nout_result, d_oatt4_llinenum);
+        krnl_aggregation2<<<gridsize, blocksize>>>(d_aht2, d_agg1, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_aggregation22 = std::clock();
@@ -237,7 +251,8 @@ int main() {
 
     std::clock_t stop_totalKernelTime0 = std::clock();
     cudaMemcpy( &nout_result, d_nout_result, 1 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt4_llinenum.data(), d_oatt4_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt5_llinenum.data(), d_oatt5_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt1_countlli.data(), d_oatt1_countlli, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -247,10 +262,12 @@ int main() {
         }
     }
 
-    cudaFree( d_iatt4_llinenum);
+    cudaFree( d_iatt5_llinenum);
     cudaFree( d_aht2);
+    cudaFree( d_agg1);
     cudaFree( d_nout_result);
-    cudaFree( d_oatt4_llinenum);
+    cudaFree( d_oatt5_llinenum);
+    cudaFree( d_oatt1_countlli);
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -267,7 +284,10 @@ int main() {
     }
     for ( int pv = 0; ((pv < 10) && (pv < nout_result)); pv += 1) {
         printf("l_linenumber: ");
-        printf("%8i", oatt4_llinenum[pv]);
+        printf("%8i", oatt5_llinenum[pv]);
+        printf("  ");
+        printf("count_l_linenumber: ");
+        printf("%8i", oatt1_countlli[pv]);
         printf("  ");
         printf("\n");
     }

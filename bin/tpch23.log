@@ -1,17 +1,17 @@
 
 Result: 7 tuples
-l_linenumber:        2  
-l_linenumber:        3  
-l_linenumber:        7  
-l_linenumber:        5  
-l_linenumber:        6  
-l_linenumber:        4  
-l_linenumber:        1  
+l_linenumber:        2  count_l_linenumber:  1285828  
+l_linenumber:        3  count_l_linenumber:  1071394  
+l_linenumber:        7  count_l_linenumber:   214621  
+l_linenumber:        5  count_l_linenumber:   643287  
+l_linenumber:        6  count_l_linenumber:   429070  
+l_linenumber:        4  count_l_linenumber:   857015  
+l_linenumber:        1  count_l_linenumber:  1500000  
 
 <timing>
-                  krnl_lineitem1:    2.1 ms
+                  krnl_lineitem1:    3.5 ms
                krnl_aggregation2:    1.7 ms
                           finish:    0.0 ms
-                 totalKernelTime:    3.8 ms
+                 totalKernelTime:    5.2 ms
 </timing>
 
