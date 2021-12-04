@@ -112,7 +112,7 @@ __global__ void krnl_lineitem1(
             if((warplane == 0)) {
                 wp = atomicAdd(nout_result, numProj);
             }
-printf("%d \n", tid);
+printf("%d: %d \n", loopVar, numProj);
             wp = __shfl_sync(ALL_LANES,wp,0);
             wp = (wp + __popc((writeMask & prefixlanes)));
             if(active) {
