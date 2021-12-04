@@ -20,7 +20,14 @@ struct apayl2 {
 };
 
 __global__ void krnl_lineitem1(
-    int* iatt5_llinenum, agg_ht<apayl2>* aht2, int* agg1, int* nout_result, int* oatt5_llinenum, int* oatt1_countlli) {
+    int* iatt5_llinenum, int* nout_result, int* oatt5_llinenum, int* oatt1_countlli) {  ///
+
+    /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
+    constexpr static int THREADS_PER_BLOCK = blockDim.x;  ///
+    constexpr static int HT_SIZE = blockDim.x * 2;  /// Allocate doubled space
+    __shared__ agg_ht<apayl2> d_aht2[HT_SIZE];  ///
+    __shared__ int d_agg1[HT_SIZE];  ///
+
     {
         /// The first odl kenrel
         int att5_llinenum;
@@ -51,7 +58,7 @@ __global__ void krnl_lineitem1(
                 int bucketFound = 0;
                 int numLookups = 0;
                 while(!(bucketFound)) {
-                    bucket = hashAggregateGetBucket ( aht2, 12002430, hash2, numLookups, &(payl));
+                    bucket = hashAggregateGetBucket ( aht2, HT_SIZE, hash2, numLookups, &(payl));  ///
                     apayl2 probepayl = aht2[bucket].payload;
                     bucketFound = 1;
                     bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
@@ -64,7 +71,7 @@ __global__ void krnl_lineitem1(
         }
     }
 
-    // TOOD(jigao): sync
+    __syncthreads();  ///
 
     {
         /// The second old kernel
@@ -80,7 +87,7 @@ __global__ void krnl_lineitem1(
         int active = 0;
         while(!(flushPipeline)) {
             tid_aggregation2 = loopVar;
-            active = (loopVar < 12002430);
+            active = (loopVar < HT_SIZE);  ///
             // flush pipeline if no new elements
             flushPipeline = !(__ballot_sync(ALL_LANES,active));
             if(active) {
@@ -173,20 +180,7 @@ int main() {
         fflush(stdout);
     }
 
-    agg_ht<apayl2>* d_aht2;
-    cudaMalloc((void**) &d_aht2, 12002430* sizeof(agg_ht<apayl2>) );  /// 12002430 == 2 * 6001215. Hash table factor is 2 over the cardinality of the base table.
-    {
-        int gridsize=920;
-        int blocksize=128;
-        initAggHT<<<gridsize, blocksize>>>(d_aht2, 12002430);
-    }
-    int* d_agg1;
-    cudaMalloc((void**) &d_agg1, 12002430* sizeof(int) );
-    {
-        int gridsize=920;
-        int blocksize=128;
-        initArray<<<gridsize, blocksize>>>(d_agg1, 0, 12002430);
-    }
+
     {
         int gridsize=920;
         int blocksize=128;
