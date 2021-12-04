@@ -117,8 +117,8 @@ __global__ void krnl_lineitem1(
             if(active) {
                 oatt5_llinenum[wp] = att5_llinenum;
                 oatt1_countlli[wp] = att1_countlli;
-            }
 printf("%d: %d wp:%d %d %d\n", loopVar, numProj, wp, att5_llinenum, att1_countlli);
+            }
             loopVar += step;
         }
     }
