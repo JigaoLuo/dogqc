@@ -80,7 +80,8 @@ __global__ void krnl_lineitem1(
         unsigned prefixlanes = (0xffffffff >> (32 - warplane));
 
         int tid_aggregation2 = 0;
-        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);
+//        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);  ///
+unsigned loopVar = threadIdx.x;  ///
         unsigned step = (blockDim.x * gridDim.x);
         unsigned flushPipeline = 0;
         int active = 0;
