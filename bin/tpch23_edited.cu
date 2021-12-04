@@ -1,3 +1,8 @@
+/// My Query 23
+/// select l_linenumber --> l_linenumber is the 4th attribute in lineitem table
+/// from lineitem
+/// group by l_linenumber
+
 #include <list>
 #include <unordered_map>
 #include <vector>
@@ -122,8 +127,11 @@ int main() {
         }
     }
 
-    int* d_iatt4_llinenum;
+    /// Input as Column Store.
+    int* d_iatt4_llinenum;  /// l_linenumber is the 4th attribute in lineitem table
     cudaMalloc((void**) &d_iatt4_llinenum, 6001215* sizeof(int) );
+
+    /// Output: allocated as max group size: the same size as the lineitem table's cardinality.
     int* d_nout_result;
     cudaMalloc((void**) &d_nout_result, 1* sizeof(int) );
     int* d_oatt4_llinenum;
