@@ -36,7 +36,7 @@ __global__ void krnl_lineitem1(
         unsigned step = (blockDim.x * gridDim.x);
         unsigned flushPipeline = 0;
         int active = 0;
-        while(!(flushPipeline)) {
+//        while(!(flushPipeline)) {
             tid_lineitem1 = loopVar;
             active = (loopVar < 6001215);
             // flush pipeline if no new elements
@@ -66,8 +66,8 @@ __global__ void krnl_lineitem1(
             if(active) {
                 atomicAdd(&(agg1[bucket]), ((int)1));
             }
-            loopVar += step;
-        }
+//            loopVar += step;
+//        }
     }
 
     __syncthreads();  ///
@@ -118,7 +118,7 @@ unsigned loopVar = threadIdx.x;  ///
             if(active) {
                 oatt5_llinenum[wp] = att5_llinenum;
                 oatt1_countlli[wp] = att1_countlli;
-printf("%d: %d wp:%d %d %d\n", loopVar, numProj, wp, att5_llinenum, att1_countlli);
+printf("%d: %d wp:%d %d %d\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
             }
             loopVar += step;
         }
