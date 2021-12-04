@@ -284,6 +284,22 @@ int main() {
     printf("\n");
     std::clock_t stop_finish3 = std::clock();
 
+    /// My Reduce
+    std::unordered_map<int, int> ht;
+    for ( int pv = 0; (pv < nout_result); pv += 1 ) {
+        ht[oatt5_llinenum[pv]] += oatt1_countlli[pv];
+    }
+    for (const auto& ele : ht) {
+        printf("l_linenumber: ");
+        printf("%8i", ele.first);
+        printf("  ");
+        printf("count_l_linenumber: ");
+        printf("%8i", ele.second);
+        printf("  ");
+        printf("\n");
+    }
+
+
     printf("<timing>\n");
     printf ( "%32s: %6.1f ms\n", "finish", (stop_finish3 - start_finish3) / (double) (CLOCKS_PER_SEC / 1000) );
     printf ( "%32s: %6.1f ms\n", "totalKernelTime", (stop_totalKernelTime0 - start_totalKernelTime0) / (double) (CLOCKS_PER_SEC / 1000) );
