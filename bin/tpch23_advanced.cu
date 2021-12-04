@@ -86,7 +86,7 @@ __global__ void krnl_lineitem1(
         int active = 0;
         while(!(flushPipeline)) {
             tid_aggregation2 = loopVar;
-            active = (loopVar < 6001215);  ///
+            active = (loopVar < HT_SIZE);  ///
             // flush pipeline if no new elements
             flushPipeline = !(__ballot_sync(ALL_LANES,active));
             if(active) {
@@ -115,8 +115,8 @@ __global__ void krnl_lineitem1(
             wp = __shfl_sync(ALL_LANES,wp,0);
             wp = (wp + __popc((writeMask & prefixlanes)));
             if(active) {
-                oatt5_llinenum[wp] = att5_llinenum;
-                oatt1_countlli[wp] = att1_countlli;
+                oatt5_llinenum[wp] = atomicAdd(att5_llinenum, oatt5_llinenum[wp]);  ///
+                oatt1_countlli[wp] = atomicAdd(att1_countlli, oatt1_countlli[wp]);  ///
             }
             loopVar += step;
         }
