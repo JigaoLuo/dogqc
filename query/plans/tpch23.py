@@ -2,8 +2,8 @@
 alg.projection (
     [ "l_linenumber", "count_l_linenumber"],
     alg.aggregation (
-        [ "l_linenumber" ],
-        [( Reduction.COUNT, "", "count_l_linenumber" )],
+        [ "l_linenumber" ], # group by ...
+        [( Reduction.COUNT, "", "count_l_linenumber" )], # aggragation function: sum, count...
         alg.scan ( "lineitem" )
     )
 )
