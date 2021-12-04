@@ -226,7 +226,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_lineitem1<<<gridsize, blocksize>>>(d_iatt5_llinenum, d_aht2, d_agg1, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
+        krnl_lineitem1<<<gridsize, blocksize>>>(d_iatt5_llinenum, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
     }
     cudaDeviceSynchronize();
     {
@@ -251,8 +251,6 @@ int main() {
     }
 
     cudaFree( d_iatt5_llinenum);
-    cudaFree( d_aht2);
-    cudaFree( d_agg1);
     cudaFree( d_nout_result);
     cudaFree( d_oatt5_llinenum);
     cudaFree( d_oatt1_countlli);
