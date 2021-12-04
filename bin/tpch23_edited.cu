@@ -154,7 +154,7 @@ int main() {
         fflush(stdout);
     }
 
-    __shared__ agg_ht<apayl2>* d_aht2;
+    agg_ht<apayl2>* d_aht2;
     cudaMalloc((void**) &d_aht2, 12002430* sizeof(agg_ht<apayl2>) );
     {
         int gridsize=920;
