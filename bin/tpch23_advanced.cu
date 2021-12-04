@@ -23,8 +23,8 @@ __global__ void krnl_lineitem1(
     int* iatt5_llinenum, int* nout_result, int* oatt5_llinenum, int* oatt1_countlli) {  ///
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
-    constexpr static int THREADS_PER_BLOCK = blockDim.x;  ///
-    constexpr static int HT_SIZE = blockDim.x * 2;  /// Allocate doubled space
+    const int THREADS_PER_BLOCK = blockDim.x;  ///
+    const int HT_SIZE = blockDim.x * 2;  /// Allocate doubled space
     __shared__ agg_ht<apayl2> d_aht2[HT_SIZE];  ///
     __shared__ int d_agg1[HT_SIZE];  ///
 
