@@ -64,7 +64,7 @@ __global__ void krnl_lineitem1(
         }
     }
 
-    cudaDeviceSynchronize();
+    // TOOD(jigao): sync
 
     {
         /// The second old kernel
@@ -229,7 +229,6 @@ int main() {
     }
 
     std::clock_t start_totalKernelTime0 = std::clock();
-    std::clock_t start_krnl_lineitem11 = std::clock();
     {
         int gridsize=920;
         int blocksize=128;
