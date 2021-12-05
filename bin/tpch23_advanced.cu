@@ -2,7 +2,6 @@
 /// select l_linenumber, count(*) --> l_linenumber is the 4th attribute in lineitem table
 /// from lineitem
 /// group by l_linenumber
-#include <omp.h>  ///
 
 #include <list>
 #include <unordered_map>
