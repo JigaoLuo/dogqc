@@ -82,11 +82,16 @@ __global__ void krnl_lineitem1(
         int tid_aggregation2 = 0;
 //        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);  ///
 unsigned loopVar = threadIdx.x;  ///
+//printf("loopVar %d\n", loopVar);
         unsigned step = (blockDim.x * gridDim.x);
         unsigned flushPipeline = 0;
         int active = 0;
         while(!(flushPipeline)) {
             tid_aggregation2 = loopVar;
+//if (tid_aggregation2 == 89) {
+//    printf("missing \n");
+//}
+//printf("loopVar %d\n", loopVar);
             active = (loopVar < HT_SIZE);  ///
             // flush pipeline if no new elements
             flushPipeline = !(__ballot_sync(ALL_LANES,active));
@@ -115,13 +120,13 @@ unsigned loopVar = threadIdx.x;  ///
             }
             wp = __shfl_sync(ALL_LANES,wp,0);
             wp = (wp + __popc((writeMask & prefixlanes)));
-if (att5_llinenum == 3) {
-    printf("missing %d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
-}
+//if (att5_llinenum == 3) {
+//    printf("missing %d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
+//}
             if(active) {
                 oatt5_llinenum[wp] = att5_llinenum;
                 oatt1_countlli[wp] = att1_countlli;
-printf("%d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
+//printf("%d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
             }
             loopVar += step;
         }
@@ -230,7 +235,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_lineitem1<<<1, 1>>>(d_iatt5_llinenum, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
+        krnl_lineitem1<<<2, blocksize>>>(d_iatt5_llinenum, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
     }
     cudaDeviceSynchronize();
     {
