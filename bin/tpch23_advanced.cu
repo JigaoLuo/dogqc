@@ -320,15 +320,15 @@ int main() {
     for ( int pv = 0; pv < nout_result; pv += 1 ) {
         ht[oatt5_llinenum[pv]] += oatt1_countlli[pv];
     }
-//    for (const auto& ele : ht) {
-//        printf("l_linenumber: ");
-//        printf("%8i", ele.first);
-//        printf("  ");
-//        printf("count_l_linenumber: ");
-//        printf("%8i", ele.second);
-//        printf("  ");
-//        printf("\n");
-//    }
+    for (const auto& ele : ht) {
+        printf("l_linenumber: ");
+        printf("%8i", ele.first);
+        printf("  ");
+        printf("count_l_linenumber: ");
+        printf("%8i", ele.second);
+        printf("  ");
+        printf("\n");
+    }
     std::clock_t stop_cpu_reduce = std::clock();
 
 
