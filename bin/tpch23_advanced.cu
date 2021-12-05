@@ -295,7 +295,7 @@ int main() {
     if((nout_result > 6001215)) {
         ERROR("Index out of range. Output size larger than allocated with expected result number.")
     }
-    for ( int pv = 0; ((pv < 100) && (pv < nout_result)); pv += 1) {
+    for ( int pv = 0; ((pv < 10) && (pv < nout_result)); pv += 1) {
         printf("l_linenumber: ");
         printf("%8i", oatt5_llinenum[pv]);
         printf("  ");
@@ -304,7 +304,7 @@ int main() {
         printf("  ");
         printf("\n");
     }
-    if((nout_result > 100)) {
+    if((nout_result > 10)) {
         printf("[...]\n");
     }
     printf("\n");
