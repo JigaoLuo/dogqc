@@ -290,7 +290,7 @@ int main() {
     }
     for (const auto& ele : ht) {
         printf("l_linenumber: ");
-        printf("%8i", ele.first);
+        printf("%8i", ele);
         printf("  ");
         printf("\n");
     }
