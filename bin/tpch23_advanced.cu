@@ -88,6 +88,7 @@ __global__ void krnl_lineitem1(
 unsigned loopVar = threadIdx.x;  ///
 printf("starting loopVar %d\n", loopVar);
         unsigned step = (blockDim.x * gridDim.x);
+printf("blockDim.x %d, gridDim.x %d\n", blockDim.x, gridDim.x);
         unsigned flushPipeline = 0;
         int active = 0;
         while(!(flushPipeline)) {
