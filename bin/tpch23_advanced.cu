@@ -24,7 +24,7 @@ __global__ void krnl_lineitem1(
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
     const int HT_SIZE = 128;  /// Allocate doubled space
-    __shared__ agg_ht<apayl2> aht2[HT_SIZE];  /// TODO: what is the size???
+    __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
     __shared__ int agg1[HT_SIZE];  ///
 
     {
