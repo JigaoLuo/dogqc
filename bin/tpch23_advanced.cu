@@ -26,13 +26,40 @@ __global__ void krnl_lineitem1(
     const int HT_SIZE = 128 * 2;  /// Allocate doubled space
     __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
     __shared__ int agg1[HT_SIZE];  ///
+    /// TODO: init all
+    {
+        /// Init hash table.
+        int ht_index;
+        unsigned loopVar = threadIdx.x;  ///
+        unsigned step = blockDim.x;  ///
+        while(loopVar < HT_SIZE) {
+            ht_index = loopVar;
+            aht2[ht_index].lock.init();
+            aht2[ht_index].hash = HASH_EMPTY;
+            loopVar += step;
+        }
+    }
 
     {
-        /// The first odl kenrel
+        /// Init array.
+        int index;
+        unsigned loopVar = threadIdx.x;  ///
+        unsigned step = blockDim.x;  ///
+        while(loopVar < HT_SIZE) {
+            index = loopVar;
+            agg1[ht_index] = 0;
+            loopVar += step;
+        }
+    }
+
+    __syncthreads();
+
+    {
+        /// The first old kenrel
         int att5_llinenum;
 
         int tid_lineitem1 = 0;
-        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);  /// TODO:能不能一个thread 一个ele, 可以从tpc23原版本开始该
+        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);
         unsigned step = (blockDim.x * gridDim.x);
         unsigned flushPipeline = 0;
         int active = 0;
@@ -63,9 +90,9 @@ __global__ void krnl_lineitem1(
                     bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
                 }
 
-if (bucket == 104) {
-    printf("att5_llinenum found? %d! at bucket %d with value\n", bucketFound,bucket, att5_llinenum); /// 192
-}
+//if (bucket == 104) {
+//    printf("att5_llinenum found? %d! at bucket %d with value\n", bucketFound,bucket, att5_llinenum); /// 192
+//}
             }
             if(active) {
                 atomicAdd(&(agg1[bucket]), ((int)1));
@@ -88,7 +115,7 @@ if (bucket == 104) {
 unsigned loopVar = threadIdx.x;  ///
 //printf("starting loopVar %d\n", loopVar);
 //        unsigned step = (blockDim.x * gridDim.x);
-unsigned step = (blockDim.x);  ///
+unsigned step = blockDim.x;  ///
 //printf("blockDim.x %d, gridDim.x %d\n", blockDim.x, gridDim.x);
         unsigned flushPipeline = 0;
         int active = 0;
@@ -105,6 +132,9 @@ unsigned step = (blockDim.x);  ///
             // -------- scan aggregation ht (opId: 2) --------
             if(active) {
                 active &= ((aht2[tid_aggregation2].lock.lock == OnceLock::LOCK_DONE));
+if (tid_aggregation2 == 104) {
+    printf("att5_llinenum found? %d! at bucket %d with value\n", bucketFound,bucket, att5_llinenum); /// 192
+}
             }
             if(active) {
                 apayl2 payl = aht2[tid_aggregation2].payload;
