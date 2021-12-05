@@ -21,9 +21,10 @@ struct apayl2 {
 
 __global__ void krnl_lineitem1(
     int* iatt4_llinenum, int* nout_result, int* oatt4_llinenum) {
+
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
     const int HT_SIZE = 128;
-    __shared__ agg_ht<apayl2> aht2[HT_SIZE * 2];  ///
+    __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
 
     {
         /// Init hash table in shared memory.
@@ -70,7 +71,7 @@ __global__ void krnl_lineitem1(
                 int bucketFound = 0;
                 int numLookups = 0;
                 while(!(bucketFound)) {
-                    bucket = hashAggregateGetBucket ( aht2, 12002430, hash2, numLookups, &(payl));
+                    bucket = hashAggregateGetBucket ( aht2, HT_SIZE, hash2, numLookups, &(payl));  ///
                     apayl2 probepayl = aht2[bucket].payload;
                     bucketFound = 1;
                     bucketFound &= ((payl.att4_llinenum == probepayl.att4_llinenum));
