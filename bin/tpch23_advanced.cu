@@ -36,7 +36,7 @@ __global__ void krnl_lineitem1(
         unsigned step = (blockDim.x * gridDim.x);
         unsigned flushPipeline = 0;
         int active = 0;
-//        while(!(flushPipeline)) {
+        while(!(flushPipeline)) {
             tid_lineitem1 = loopVar;
             active = (loopVar < 6001215);
             // flush pipeline if no new elements
@@ -66,8 +66,8 @@ __global__ void krnl_lineitem1(
             if(active) {
                 atomicAdd(&(agg1[bucket]), ((int)1));
             }
-//            loopVar += step;
-//        }
+            loopVar += step;
+        }
     }
 
     __syncthreads();  ///
@@ -227,7 +227,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_lineitem1<<<gridsize, blocksize>>>(d_iatt5_llinenum, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
+        krnl_lineitem1<<<1, 1>>>(d_iatt5_llinenum, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
     }
     cudaDeviceSynchronize();
     {
