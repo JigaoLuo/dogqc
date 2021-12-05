@@ -135,7 +135,7 @@ unsigned step = (blockDim.x);  ///
 //printf("writeout %d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
 
 if (att5_llinenum == 0) {
-    printf("%d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
+    printf("%d %d: %d wp:%d (%d, %d)\n", loopVar, tid_aggregation2,  numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
 }
             }
             loopVar += step;
