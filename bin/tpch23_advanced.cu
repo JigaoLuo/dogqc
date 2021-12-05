@@ -312,7 +312,7 @@ int main() {
     std::clock_t stop_finish3 = std::clock();
 
     /// My Reduce
-    std::cout << "MY REDUCE ON CPU (single-cpu-threaded)" << std::endl;
+    std::cout << "MY REDUCE ON CPU" << std::endl;
     std::clock_t start_cpu_reduce = std::clock();
     std::unordered_map<int, int> ht;
 #pragma omp parallel for
@@ -335,6 +335,6 @@ int main() {
     printf("<timing>\n");
     printf ( "%32s: %6.1f ms\n", "finish", (stop_finish3 - start_finish3) / (double) (CLOCKS_PER_SEC / 1000) );
     printf ( "%32s: %6.1f ms\n", "totalKernelTime", (stop_totalKernelTime0 - start_totalKernelTime0) / (double) (CLOCKS_PER_SEC / 1000) );
-    printf ( "%32s: %6.1f ms\n", "reduce on CPU (single-cpu-threaded)", (stop_cpu_reduce - start_cpu_reduce) / (double) (CLOCKS_PER_SEC / 1000) );
+    printf ( "%32s: %6.1f ms\n", "reduce on CPU", (stop_cpu_reduce - start_cpu_reduce) / (double) (CLOCKS_PER_SEC / 1000) );
     printf("</timing>\n");
 }
