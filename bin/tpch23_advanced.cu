@@ -63,9 +63,9 @@ __global__ void krnl_lineitem1(
                     bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
                 }
 
-if (att5_llinenum == 3) {
-    printf("att5_llinenum found? %d! at bucket %d\n", bucketFound,bucket);
-}
+//if (att5_llinenum == 3) {
+//    printf("att5_llinenum found? %d! at bucket %d\n", bucketFound,bucket); /// 192
+//}
             }
             if(active) {
                 atomicAdd(&(agg1[bucket]), ((int)1));
@@ -86,16 +86,16 @@ if (att5_llinenum == 3) {
         int tid_aggregation2 = 0;
 //        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);  ///
 unsigned loopVar = threadIdx.x;  ///
-//printf("loopVar %d\n", loopVar);
+printf("starting loopVar %d\n", loopVar);
         unsigned step = (blockDim.x * gridDim.x);
         unsigned flushPipeline = 0;
         int active = 0;
         while(!(flushPipeline)) {
             tid_aggregation2 = loopVar;
-//if (tid_aggregation2 == 89) {
-//    printf("missing \n");
-//}
-//printf("loopVar %d\n", loopVar);
+if (tid_aggregation2 == 192) {
+    printf("missing bucket's thread at 192\n");
+}
+printf("loopVar %d\n", loopVar);
             active = (loopVar < HT_SIZE);  ///
             // flush pipeline if no new elements
             flushPipeline = !(__ballot_sync(ALL_LANES,active));
