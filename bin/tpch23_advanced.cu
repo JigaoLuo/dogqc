@@ -86,16 +86,17 @@ __global__ void krnl_lineitem1(
         int tid_aggregation2 = 0;
 //        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);  ///
 unsigned loopVar = threadIdx.x;  ///
-printf("starting loopVar %d\n", loopVar);
-        unsigned step = (blockDim.x * gridDim.x);
-printf("blockDim.x %d, gridDim.x %d\n", blockDim.x, gridDim.x);
+//printf("starting loopVar %d\n", loopVar);
+//        unsigned step = (blockDim.x * gridDim.x);
+unsigned step = (blockDim.x);  ///
+//printf("blockDim.x %d, gridDim.x %d\n", blockDim.x, gridDim.x);
         unsigned flushPipeline = 0;
         int active = 0;
         while(!(flushPipeline)) {
             tid_aggregation2 = loopVar;
-if (tid_aggregation2 == 192) {
-    printf("missing bucket's thread at 192\n");
-}
+//if (tid_aggregation2 == 192) {
+//    printf("missing bucket's thread at 192\n");
+//}
             active = (loopVar < HT_SIZE);  ///
             // flush pipeline if no new elements
             flushPipeline = !(__ballot_sync(ALL_LANES,active));
@@ -133,7 +134,7 @@ if (tid_aggregation2 == 192) {
 //printf("%d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
             }
             loopVar += step;
-printf("updated loopVar %d\n", loopVar);
+//printf("updated loopVar %d\n", loopVar);
         }
     }
 
