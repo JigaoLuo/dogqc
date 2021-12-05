@@ -241,7 +241,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_lineitem1<<<2, blocksize>>>(d_iatt5_llinenum, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
+        krnl_lineitem1<<<gridsize, blocksize>>>(d_iatt5_llinenum, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
     }
     cudaDeviceSynchronize();
     {
