@@ -63,9 +63,9 @@ __global__ void krnl_lineitem1(
                     bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
                 }
 
-//if (att5_llinenum == 3) {
-//    printf("att5_llinenum found? %d! at bucket %d\n", bucketFound,bucket); /// 192
-//}
+if (bucket == 104) {
+    printf("att5_llinenum found? %d! at bucket %d with value\n", bucketFound,bucket, att5_llinenum); /// 192
+}
             }
             if(active) {
                 atomicAdd(&(agg1[bucket]), ((int)1));
