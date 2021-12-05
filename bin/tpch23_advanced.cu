@@ -3,6 +3,7 @@
 /// from lineitem
 /// group by l_linenumber
 #include "tbb/concurrent_unordered_map.h"  ///
+#include <omp.h>  ///
 
 #include <list>
 #include <unordered_map>
@@ -315,18 +316,19 @@ int main() {
     std::cout << "MY REDUCE ON CPU" << std::endl;
     std::clock_t start_cpu_reduce = std::clock();
     tbb::concurrent_unordered_map<int, int> ht;
+#pragma omp parallel for
     for ( int pv = 0; pv < nout_result; pv += 1 ) {
         ht[oatt5_llinenum[pv]] += oatt1_countlli[pv];
     }
-    for (const auto& ele : ht) {
-        printf("l_linenumber: ");
-        printf("%8i", ele.first);
-        printf("  ");
-        printf("count_l_linenumber: ");
-        printf("%8i", ele.second);
-        printf("  ");
-        printf("\n");
-    }
+//    for (const auto& ele : ht) {
+//        printf("l_linenumber: ");
+//        printf("%8i", ele.first);
+//        printf("  ");
+//        printf("count_l_linenumber: ");
+//        printf("%8i", ele.second);
+//        printf("  ");
+//        printf("\n");
+//    }
     std::clock_t stop_cpu_reduce = std::clock();
 
 
