@@ -47,7 +47,7 @@ __global__ void krnl_lineitem1(
         unsigned step = blockDim.x;  ///
         while(loopVar < HT_SIZE) {
             index = loopVar;
-            agg1[ht_index] = 0;
+            agg1[index] = 0;
             loopVar += step;
         }
     }
@@ -132,9 +132,6 @@ unsigned step = blockDim.x;  ///
             // -------- scan aggregation ht (opId: 2) --------
             if(active) {
                 active &= ((aht2[tid_aggregation2].lock.lock == OnceLock::LOCK_DONE));
-if (tid_aggregation2 == 104) {
-    printf("att5_llinenum found? %d! at bucket %d with value\n", bucketFound,bucket, att5_llinenum); /// 192
-}
             }
             if(active) {
                 apayl2 payl = aht2[tid_aggregation2].payload;
