@@ -334,7 +334,7 @@ int main() {
         printf("%8i", ele.first);
         printf("  ");
         printf("count_l_linenumber: ");
-        printf("%8i", ele.second);
+        printf("%8i", ele.second.load());
         printf("  ");
         printf("\n");
     }
