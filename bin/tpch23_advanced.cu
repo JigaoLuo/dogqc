@@ -132,9 +132,11 @@ printf("%d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_coun
             if(active) {
                 oatt5_llinenum[wp] = att5_llinenum;
                 oatt1_countlli[wp] = att1_countlli;
-if (att5_llinenum == 0) {
-    printf("%d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
-}
+printf("writeout %d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
+
+//if (att5_llinenum == 0) {
+//    printf("%d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
+//}
             }
             loopVar += step;
 //printf("updated loopVar %d\n", loopVar);
