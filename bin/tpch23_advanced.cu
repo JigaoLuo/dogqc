@@ -32,7 +32,7 @@ __global__ void krnl_lineitem1(
         int att5_llinenum;
 
         int tid_lineitem1 = 0;
-        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);
+        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);  /// TODO:能不能一个thread 一个ele, 可以从tpc23原版本开始该
         unsigned step = (blockDim.x * gridDim.x);
         unsigned flushPipeline = 0;
         int active = 0;
