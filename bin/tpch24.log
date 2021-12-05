@@ -1,0 +1,17 @@
+
+Result: 7 tuples
+l_linenumber:        2  
+l_linenumber:        3  
+l_linenumber:        7  
+l_linenumber:        5  
+l_linenumber:        6  
+l_linenumber:        4  
+l_linenumber:        1  
+
+<timing>
+                  krnl_lineitem1:    3.0 ms
+               krnl_aggregation2:    1.7 ms
+                          finish:    0.0 ms
+                 totalKernelTime:    4.6 ms
+</timing>
+
