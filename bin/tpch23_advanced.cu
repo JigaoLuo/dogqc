@@ -24,11 +24,11 @@ __global__ void krnl_lineitem1(
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
     const int HT_SIZE = 128 * 2;  /// Allocate doubled space
-    __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
+    __shared__ agg_ht<apayl2> aht2[HT_SIZE];  /// TODO: what is the size???
     __shared__ int agg1[HT_SIZE];  ///
-    /// TODO: init all
+
     {
-        /// Init hash table.
+        /// Init hash table in shared memory.
         int ht_index;
         unsigned loopVar = threadIdx.x;  ///
         unsigned step = blockDim.x;  ///
@@ -41,7 +41,7 @@ __global__ void krnl_lineitem1(
     }
 
     {
-        /// Init array.
+        /// Init array in shared memory.
         int index;
         unsigned loopVar = threadIdx.x;  ///
         unsigned step = blockDim.x;  ///
@@ -89,10 +89,6 @@ __global__ void krnl_lineitem1(
                     bucketFound = 1;
                     bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
                 }
-
-//if (bucket == 104) {
-//    printf("att5_llinenum found? %d! at bucket %d with value\n", bucketFound,bucket, att5_llinenum); /// 192
-//}
             }
             if(active) {
                 atomicAdd(&(agg1[bucket]), ((int)1));
@@ -112,18 +108,13 @@ __global__ void krnl_lineitem1(
 
         int tid_aggregation2 = 0;
 //        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);  ///
-unsigned loopVar = threadIdx.x;  ///
-//printf("starting loopVar %d\n", loopVar);
+        unsigned loopVar = threadIdx.x;  ///
 //        unsigned step = (blockDim.x * gridDim.x);
-unsigned step = blockDim.x;  ///
-//printf("blockDim.x %d, gridDim.x %d\n", blockDim.x, gridDim.x);
+        unsigned step = blockDim.x;  ///
         unsigned flushPipeline = 0;
         int active = 0;
         while(!(flushPipeline)) {
             tid_aggregation2 = loopVar;
-//if (tid_aggregation2 == 192) {
-//    printf("missing bucket's thread at 192\n");
-//}
             active = (loopVar < HT_SIZE);  ///
             // flush pipeline if no new elements
             flushPipeline = !(__ballot_sync(ALL_LANES,active));
@@ -152,24 +143,13 @@ unsigned step = blockDim.x;  ///
             }
             wp = __shfl_sync(ALL_LANES,wp,0);
             wp = (wp + __popc((writeMask & prefixlanes)));
-//if (att5_llinenum == 3) {
-//    printf("missing %d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
-//}
-//printf("%d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli);
             if(active) {
                 oatt5_llinenum[wp] = att5_llinenum;
                 oatt1_countlli[wp] = att1_countlli;
-//printf("writeout %d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
-
-if (att5_llinenum == 0) {
-    printf("%d %d: %d wp:%d (%d, %d)\n", loopVar, tid_aggregation2,  numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
-}
             }
             loopVar += step;
-//printf("updated loopVar %d\n", loopVar);
         }
     }
-
 }
 
 int main() {
@@ -331,6 +311,8 @@ int main() {
     std::clock_t stop_finish3 = std::clock();
 
     /// My Reduce
+    std::cout << "MY REDUCE ON CPU" << std::endl;
+    std::clock_t start_cpu_reduce = std::clock();
     std::unordered_map<int, int> ht;
     for ( int pv = 0; (pv < nout_result); pv += 1 ) {
         ht[oatt5_llinenum[pv]] += oatt1_countlli[pv];
@@ -344,10 +326,12 @@ int main() {
         printf("  ");
         printf("\n");
     }
+    std::clock_t stop_cpu_reduce = std::clock();
 
 
     printf("<timing>\n");
     printf ( "%32s: %6.1f ms\n", "finish", (stop_finish3 - start_finish3) / (double) (CLOCKS_PER_SEC / 1000) );
     printf ( "%32s: %6.1f ms\n", "totalKernelTime", (stop_totalKernelTime0 - start_totalKernelTime0) / (double) (CLOCKS_PER_SEC / 1000) );
+    printf ( "%32s: %6.1f ms\n", "reduce on CPU", (stop_cpu_reduce - start_cpu_reduce) / (double) (CLOCKS_PER_SEC / 1000) );
     printf("</timing>\n");
 }
