@@ -23,7 +23,7 @@ __global__ void krnl_lineitem1(
     int* iatt4_llinenum, int* nout_result, int* oatt4_llinenum) {
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
     const int HT_SIZE = 128;
-    __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
+    __shared__ agg_ht<apayl2> aht2[HT_SIZE * 2];  ///
 
     {
         /// Init hash table in shared memory.
@@ -230,7 +230,6 @@ int main() {
         krnl_lineitem1<<<gridsize, blocksize>>>(d_iatt4_llinenum, d_nout_result, d_oatt4_llinenum);
     }
     cudaDeviceSynchronize();
-    std::clock_t stop_totalKernelTime0 = std::clock();
     {
         cudaError err = cudaGetLastError();
         if(err != cudaSuccess) {
@@ -238,6 +237,7 @@ int main() {
             ERROR("krnl_lineitem1")
         }
     }
+    std::clock_t stop_totalKernelTime0 = std::clock();
 
     cudaMemcpy( &nout_result, d_nout_result, 1 * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy( oatt4_llinenum.data(), d_oatt4_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
