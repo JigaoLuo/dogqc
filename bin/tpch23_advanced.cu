@@ -316,25 +316,17 @@ int main() {
     /// My Reduce
     std::cout << "MY REDUCE ON CPU" << std::endl;
     std::clock_t start_cpu_reduce = std::clock();
-    std::unordered_map<int, std::atomic<int>> ht;
+    std::unordered_map<int, int> ht;
     ht.reserve(nout_result / 920);
-#pragma omp parallel for
     for ( int pv = 0; pv < nout_result; pv += 1 ) {
-        if (ht.find(oatt5_llinenum[pv]) == ht.end()) {
-#pragma omp critical
-            {
-                ht[oatt5_llinenum[pv]] = oatt1_countlli[pv];
-            }
-        } else {
-            ht[oatt5_llinenum[pv]] += oatt1_countlli[pv];
-        }
+        ht[oatt5_llinenum[pv]] += oatt1_countlli[pv];
     }
     for (const auto& ele : ht) {
         printf("l_linenumber: ");
         printf("%8i", ele.first);
         printf("  ");
         printf("count_l_linenumber: ");
-        printf("%8i", ele.second.load());
+        printf("%8i", ele.second);
         printf("  ");
         printf("\n");
     }
