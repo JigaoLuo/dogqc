@@ -2,6 +2,7 @@
 /// select l_linenumber, count(*) --> l_linenumber is the 4th attribute in lineitem table
 /// from lineitem
 /// group by l_linenumber
+#include "tbb/concurrent_unordered_map.h"  ///
 
 #include <list>
 #include <unordered_map>
@@ -313,10 +314,8 @@ int main() {
     /// My Reduce
     std::cout << "MY REDUCE ON CPU" << std::endl;
     std::clock_t start_cpu_reduce = std::clock();
-    std::unordered_map<int, int> ht;
-#pragma omp parallel for
+    tbb::concurrent_unordered_map<int, int> ht;
     for ( int pv = 0; pv < nout_result; pv += 1 ) {
-#pragma omp critical
         ht[oatt5_llinenum[pv]] += oatt1_countlli[pv];
     }
     for (const auto& ele : ht) {
