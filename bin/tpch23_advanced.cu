@@ -115,10 +115,13 @@ unsigned loopVar = threadIdx.x;  ///
             }
             wp = __shfl_sync(ALL_LANES,wp,0);
             wp = (wp + __popc((writeMask & prefixlanes)));
+if (att5_llinenum == 3) {
+    printf("missing %d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
+}
             if(active) {
                 oatt5_llinenum[wp] = att5_llinenum;
                 oatt1_countlli[wp] = att1_countlli;
-printf("%d: %d wp:%d %d %d\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
+printf("%d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
             }
             loopVar += step;
         }
