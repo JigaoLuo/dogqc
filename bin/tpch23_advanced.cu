@@ -23,7 +23,7 @@ __global__ void krnl_lineitem1(
     int* iatt5_llinenum, int* nout_result, int* oatt5_llinenum, int* oatt1_countlli) {  ///
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
-    const int HT_SIZE = 128;  /// Allocate doubled space
+    const int HT_SIZE = 128 * 2;  /// Allocate doubled space
     __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
     __shared__ int agg1[HT_SIZE];  ///
 
@@ -277,7 +277,7 @@ int main() {
     if((nout_result > 6001215)) {
         ERROR("Index out of range. Output size larger than allocated with expected result number.")
     }
-    for ( int pv = 0; ((pv < 10) && (pv < nout_result)); pv += 1) {
+    for ( int pv = 0; ((pv < 100) && (pv < nout_result)); pv += 1) {
         printf("l_linenumber: ");
         printf("%8i", oatt5_llinenum[pv]);
         printf("  ");
@@ -286,7 +286,7 @@ int main() {
         printf("  ");
         printf("\n");
     }
-    if((nout_result > 10)) {
+    if((nout_result > 100)) {
         printf("[...]\n");
     }
     printf("\n");
