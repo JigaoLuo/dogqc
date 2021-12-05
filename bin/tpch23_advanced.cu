@@ -95,7 +95,6 @@ printf("starting loopVar %d\n", loopVar);
 if (tid_aggregation2 == 192) {
     printf("missing bucket's thread at 192\n");
 }
-printf("loopVar %d\n", loopVar);
             active = (loopVar < HT_SIZE);  ///
             // flush pipeline if no new elements
             flushPipeline = !(__ballot_sync(ALL_LANES,active));
@@ -133,6 +132,7 @@ printf("loopVar %d\n", loopVar);
 //printf("%d: %d wp:%d (%d, %d)\n", loopVar, numProj, wp, att5_llinenum, att1_countlli); ///有线程不安全的地方
             }
             loopVar += step;
+printf("updated loopVar %d\n", loopVar);
         }
     }
 
