@@ -323,7 +323,7 @@ int main() {
         if (ht.find(oatt5_llinenum[pv]) == ht.end()) {
 #pragma omp critical
             {
-                ht[oatt5_llinenum[pv]] = std::atomic<int>(oatt1_countlli[pv]);
+                ht[oatt5_llinenum[pv]] = oatt1_countlli[pv];
             }
         } else {
             ht[oatt5_llinenum[pv]] += oatt1_countlli[pv];
