@@ -2,6 +2,7 @@
 /// select l_linenumber --> l_linenumber is the 4th attribute in lineitem table
 /// from lineitem
 /// group by l_linenumber
+#include <unordered_set>
 
 #include <list>
 #include <unordered_map>
@@ -280,8 +281,25 @@ int main() {
     printf("\n");
     std::clock_t stop_finish3 = std::clock();
 
+    /// My Reduce
+    std::cout << "MY REDUCE ON CPU (single-cpu-threaded)" << std::endl;
+    std::clock_t start_cpu_reduce = std::clock();
+    std::unordered_set<int> ht;
+    for ( int pv = 0; (pv < nout_result); pv += 1 ) {
+        ht.emplace(oatt4_llinenum[pv]);
+    }
+    for (const auto& ele : ht) {
+        printf("l_linenumber: ");
+        printf("%8i", ele.first);
+        printf("  ");
+        printf("\n");
+    }
+    std::clock_t stop_cpu_reduce = std::clock();
+
+
     printf("<timing>\n");
     printf ( "%32s: %6.1f ms\n", "finish", (stop_finish3 - start_finish3) / (double) (CLOCKS_PER_SEC / 1000) );
     printf ( "%32s: %6.1f ms\n", "totalKernelTime", (stop_totalKernelTime0 - start_totalKernelTime0) / (double) (CLOCKS_PER_SEC / 1000) );
+    printf ( "%32s: %6.1f ms\n", "reduce on CPU (single-cpu-threaded)", (stop_cpu_reduce - start_cpu_reduce) / (double) (CLOCKS_PER_SEC / 1000) );
     printf("</timing>\n");
 }
