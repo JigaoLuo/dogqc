@@ -167,8 +167,19 @@ int main() {
     iatt5_llinenum = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber" );
 
     int nout_result;
-    std::vector < int > oatt5_llinenum(6001215);
-    std::vector < int > oatt1_countlli(6001215);
+    /// std::vector < int > oatt5_llinenum(6001215);
+    /// std::vector < int > oatt1_countlli(6001215);
+    int* oatt5_llinenum;  ///
+    int* oatt1_countlli;  ///
+    cudaMallocHost((void**)&oatt5_llinenum, 6001215);  /// host pinned
+    cudaMallocHost((void**)&oatt1_countlli, 6001215);  /// host pinned
+    {
+        cudaError err = cudaGetLastError();
+        if(err != cudaSuccess) {
+            std::cerr << "Cuda Error in cudaMallocHost! " << cudaGetErrorString( err ) << std::endl;
+            ERROR("cudaMallocHost")
+        }
+    }
 
     // wake up gpu
     cudaDeviceSynchronize();
@@ -276,8 +287,10 @@ int main() {
 
     std::clock_t stop_totalKernelTime0 = std::clock();
     cudaMemcpy( &nout_result, d_nout_result, 1 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt5_llinenum.data(), d_oatt5_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt1_countlli.data(), d_oatt1_countlli, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    /// cudaMemcpy( oatt5_llinenum.data(), d_oatt5_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    /// cudaMemcpy( oatt1_countlli.data(), d_oatt1_countlli, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt5_llinenum, d_oatt5_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt1_countlli, d_oatt1_countlli, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
