@@ -2,8 +2,9 @@
 /// select l_linenumber --> l_linenumber is the 4th attribute in lineitem table
 /// from lineitem
 /// group by l_linenumber
-#include <unordered_set>
-#include <cassert>
+#include <unordered_set>  ///
+#include <cassert>  ///
+#include <cstring>  ///
 
 #include <list>
 #include <unordered_map>
@@ -146,7 +147,9 @@ __global__ void krnl_lineitem1(
 
 int main() {
     int* iatt4_llinenum;
-    iatt4_llinenum = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber" );
+    size_t filesize = get_file_size( "mmdb/lineitem_l_linenumber" );  ///
+    cudaMallocHost((void**)&iatt4_llinenum, filesize - 8 /* 8: the meta: size of file in 8bytes*/);  /// host pinned
+    read_file("mmdb/lineitem_l_linenumber", (void*)iatt4_llinenum );  ///
 
     int nout_result;
     /// std::vector < int > oatt4_llinenum(6001215);
@@ -307,6 +310,17 @@ int main() {
         printf("\n");
     }
     std::clock_t stop_cpu_reduce = std::clock();
+
+    cudaFreeHost( iatt4_llinenum );  ///
+    cudaFreeHost( oatt4_llinenum );  ///
+    cudaDeviceSynchronize();
+    {
+        cudaError err = cudaGetLastError();
+        if(err != cudaSuccess) {
+            std::cerr << "Cuda Error in cuda free host! " << cudaGetErrorString( err ) << std::endl;
+            ERROR("cuda free host")
+        }
+    }
 
 
     printf("<timing>\n");

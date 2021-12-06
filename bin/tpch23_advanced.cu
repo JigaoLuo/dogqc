@@ -2,8 +2,8 @@
 /// select l_linenumber, count(*) --> l_linenumber is the 4th attribute in lineitem table
 /// from lineitem
 /// group by l_linenumber
-#include <cassert>
-#include <cstring>
+#include <cassert>  ///
+#include <cstring>  ///
 
 #include <list>
 #include <unordered_map>
@@ -167,8 +167,6 @@ int main() {
     size_t filesize = get_file_size( "mmdb/lineitem_l_linenumber" );  ///
     cudaMallocHost((void**)&iatt5_llinenum, filesize - 8 /* 8: the meta: size of file in 8bytes*/);  /// host pinned
     read_file("mmdb/lineitem_l_linenumber", (void*)iatt5_llinenum );  ///
-
-    // TODO(jigao): free all memory
 
     int nout_result;
     /// std::vector < int > oatt5_llinenum(6001215);
