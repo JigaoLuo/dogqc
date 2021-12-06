@@ -3,6 +3,7 @@
 /// from lineitem
 /// group by l_linenumber
 #include <cassert>
+#include <cstring>
 
 #include <list>
 #include <unordered_map>
@@ -21,7 +22,6 @@ struct apayl2 {
 };
 
 constexpr int SHARED_MEMORY_SIZE = 49152;  /// Total amount of shared memory per block:       49152 bytes
-
 
 __global__ void krnl_lineitem1(
     int* iatt5_llinenum, int* nout_result, int* oatt5_llinenum, int* oatt1_countlli) {  ///
@@ -163,10 +163,12 @@ __global__ void krnl_lineitem1(
 }
 
 int main() {
-    size_t filesize;
     int* iatt5_llinenum;
-    iatt5_llinenum = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber", filesize );
-std::cout << "filesize: " << filesize << std::endl;
+    int* iatt5_llinenum_mmap;
+    size_t filesize;  ///
+    iatt5_llinenum_mmap = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber", filesize );
+    cudaMallocHost((void**)&iatt5_llinenum, filesize - 8 /* 8: the meta: size of file in 8bytes*/);  /// host pinned
+    std::memcpy(iatt5_llinenum, iatt5_llinenum_mmap, filesize - 8);
 
     int nout_result;
     /// std::vector < int > oatt5_llinenum(6001215);

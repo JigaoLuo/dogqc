@@ -81,7 +81,7 @@ void* map_memory_file ( const char* filepath ) {
     return (void*)(map+8);
 }
 
-void* map_memory_file ( const char* filepath,  size_t& filesize) {
+void* map_memory_file ( const char* filepath, size_t& filesize) {
     int fd = open(filepath, O_RDWR, (mode_t)0600);
     if (fd == -1) {
         ERROR("Opening file")
