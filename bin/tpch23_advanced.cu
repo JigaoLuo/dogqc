@@ -171,8 +171,8 @@ int main() {
     /// std::vector < int > oatt1_countlli(6001215);
     int* oatt5_llinenum;  ///
     int* oatt1_countlli;  ///
-    cudaMallocHost((void**)&oatt5_llinenum, 6001215);  /// host pinned
-    cudaMallocHost((void**)&oatt1_countlli, 6001215);  /// host pinned
+    cudaMallocHost((void**)&oatt5_llinenum, 6001215 * sizeof(int));  /// host pinned
+    cudaMallocHost((void**)&oatt1_countlli, 6001215 * sizeof(int));  /// host pinned
     {
         cudaError err = cudaGetLastError();
         if(err != cudaSuccess) {
