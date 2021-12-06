@@ -308,9 +308,6 @@ int main() {
     cudaFree( d_nout_result);
     cudaFree( d_oatt5_llinenum);
     cudaFree( d_oatt1_countlli);
-    cudaFreeHost( iatt5_llinenum );  ///
-    cudaFreeHost( oatt5_llinenum );  ///
-    cudaFreeHost( oatt1_countlli );  ///
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -358,6 +355,17 @@ int main() {
     }
     std::clock_t stop_cpu_reduce = std::clock();
 
+    cudaFreeHost( iatt5_llinenum );  ///
+    cudaFreeHost( oatt5_llinenum );  ///
+    cudaFreeHost( oatt1_countlli );  ///
+    cudaDeviceSynchronize();
+    {
+        cudaError err = cudaGetLastError();
+        if(err != cudaSuccess) {
+            std::cerr << "Cuda Error in cuda free host! " << cudaGetErrorString( err ) << std::endl;
+            ERROR("cuda free host")
+        }
+    }
 
     printf("<timing>\n");
     printf ( "%32s: %6.1f ms\n", "finish", (stop_finish3 - start_finish3) / (double) (CLOCKS_PER_SEC / 1000) );
