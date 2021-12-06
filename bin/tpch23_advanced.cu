@@ -20,11 +20,13 @@ struct apayl2 {
     int att5_llinenum;
 };
 
+constexpr int SHARED_MEMORY_SIZE = 49152;  /// Total amount of shared memory per block:       49152 bytes
+
+
 __global__ void krnl_lineitem1(
     int* iatt5_llinenum, int* nout_result, int* oatt5_llinenum, int* oatt1_countlli) {  ///
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
-    int SHARED_MEMORY_SIZE = 49152;  /// Total amount of shared memory per block:       49152 bytes
     const int HT_SIZE = 128;
     __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
     __shared__ int agg1[HT_SIZE];  ///
