@@ -33,7 +33,7 @@ __global__ void krnl_lineitem1(
     assert(sizeof(aht2) + sizeof(agg1) <= SHARED_MEMORY_SIZE);  /// Check stuff fits into shared memory in a SM.
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         /// Allow only one print here.
-        printf("Shared memory usage: %d / %d bytes.\n", SHARED_MEMORY_SIZE, sizeof(aht2) + sizeof(agg1));
+        printf("Shared memory usage: %d  %d bytes.\n", sizeof(aht2) + sizeof(agg1), SHARED_MEMORY_SIZE);
     }
 
     {
