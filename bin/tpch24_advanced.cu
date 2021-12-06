@@ -3,6 +3,7 @@
 /// from lineitem
 /// group by l_linenumber
 #include <unordered_set>
+#include <cassert>
 
 #include <list>
 #include <unordered_map>
@@ -20,12 +21,20 @@ struct apayl2 {
     int att4_llinenum;
 };
 
+constexpr int SHARED_MEMORY_SIZE = 49152;  /// Total amount of shared memory per block:       49152 bytes
+
 __global__ void krnl_lineitem1(
     int* iatt4_llinenum, int* nout_result, int* oatt4_llinenum) {
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
     const int HT_SIZE = 128;
     __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
+    const int shared_memory_usage = sizeof(aht2);
+    assert(shared_memory_usage <= SHARED_MEMORY_SIZE);  /// Check stuff fits into shared memory in a SM.
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        /// Allow only one print here.
+        printf("Shared memory usage: %d / %d bytes.\n", shared_memory_usage, SHARED_MEMORY_SIZE);
+    }
 
     {
         /// Init hash table in shared memory.
