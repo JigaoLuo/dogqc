@@ -115,3 +115,26 @@ void free_memory_mapped_file ( const char* filepath ) {
       ERROR("deleting file");
    }
 }
+
+size_t get_file_size ( const char* filepath ) {
+    int fd = open(filepath, O_RDWR, (mode_t)0600);
+    if (fd == -1) {
+        ERROR("Opening file")
+    }
+    size_t filesize;
+    read(fd, &filesize, 8);
+    close(fd);
+    return filesize;  /// including the first 8 byte is the meta.
+}
+
+void read_file ( const char* filepath, void* buf) {
+    int fd = open(filepath, O_RDWR, (mode_t)0600);
+    if (fd == -1) {
+        ERROR("Opening file")
+    }
+    size_t filesize;
+    read(fd, &filesize, 8);
+    read(fd, buf, filesize - 8);
+    close(fd);
+}
+

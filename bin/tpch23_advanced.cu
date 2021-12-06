@@ -164,11 +164,9 @@ __global__ void krnl_lineitem1(
 
 int main() {
     int* iatt5_llinenum;
-    int* iatt5_llinenum_mmap;
-    size_t filesize;  ///
-    iatt5_llinenum_mmap = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber", filesize );
+    size_t filesize = get_file_size( "mmdb/lineitem_l_linenumber" );  ///
     cudaMallocHost((void**)&iatt5_llinenum, filesize - 8 /* 8: the meta: size of file in 8bytes*/);  /// host pinned
-    std::memcpy(iatt5_llinenum, iatt5_llinenum_mmap, filesize - 8);
+    read_file("mmdb/lineitem_l_linenumber", (void*)iatt5_llinenum );
 
     int nout_result;
     /// std::vector < int > oatt5_llinenum(6001215);
