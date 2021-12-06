@@ -30,11 +30,11 @@ __global__ void krnl_lineitem1(
     const int HT_SIZE = 128;
     __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
     __shared__ int agg1[HT_SIZE];  ///
-    assert(sizeof(aht2) + sizeof(agg1) <= SHARED_MEMORY_SIZE);  /// Check stuff fits into shared memory in a SM.
-//    if (threadIdx.x == 0 && blockIdx.x == 0)
-    {
+    const int shared_memory_usage = sizeof(aht2) + sizeof(agg1);
+    assert(shared_memory_usage <= SHARED_MEMORY_SIZE);  /// Check stuff fits into shared memory in a SM.
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
         /// Allow only one print here.
-        printf("Shared memory usage: %d  %d bytes.\n", sizeof(aht2) + sizeof(agg1), SHARED_MEMORY_SIZE);
+        printf("Shared memory usage: %d  %d bytes.\n", shared_memory_usage, SHARED_MEMORY_SIZE);
     }
 
     {
