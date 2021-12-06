@@ -149,7 +149,9 @@ int main() {
     iatt4_llinenum = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber" );
 
     int nout_result;
-    std::vector < int > oatt4_llinenum(6001215);
+    /// std::vector < int > oatt4_llinenum(6001215);
+    int* oatt4_llinenum;  ///
+    cudaMallocHost((void**)&oatt4_llinenum, 6001215 * sizeof(int));  /// host pinned
 
     // wake up gpu
     cudaDeviceSynchronize();
@@ -251,7 +253,8 @@ int main() {
     std::clock_t stop_totalKernelTime0 = std::clock();
 
     cudaMemcpy( &nout_result, d_nout_result, 1 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt4_llinenum.data(), d_oatt4_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    /// cudaMemcpy( oatt4_llinenum.data(), d_oatt4_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt4_llinenum, d_oatt4_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);  ///
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();

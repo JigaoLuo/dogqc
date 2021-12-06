@@ -289,8 +289,8 @@ int main() {
     cudaMemcpy( &nout_result, d_nout_result, 1 * sizeof(int), cudaMemcpyDeviceToHost);
     /// cudaMemcpy( oatt5_llinenum.data(), d_oatt5_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
     /// cudaMemcpy( oatt1_countlli.data(), d_oatt1_countlli, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt5_llinenum, d_oatt5_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt1_countlli, d_oatt1_countlli, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt5_llinenum, d_oatt5_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);  ///
+    cudaMemcpy( oatt1_countlli, d_oatt1_countlli, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);  ///
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
