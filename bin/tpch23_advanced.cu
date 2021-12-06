@@ -166,7 +166,9 @@ int main() {
     int* iatt5_llinenum;
     size_t filesize = get_file_size( "mmdb/lineitem_l_linenumber" );  ///
     cudaMallocHost((void**)&iatt5_llinenum, filesize - 8 /* 8: the meta: size of file in 8bytes*/);  /// host pinned
-    read_file("mmdb/lineitem_l_linenumber", (void*)iatt5_llinenum );
+    read_file("mmdb/lineitem_l_linenumber", (void*)iatt5_llinenum );  ///
+
+    // TODO(jigao): free all memory
 
     int nout_result;
     /// std::vector < int > oatt5_llinenum(6001215);
@@ -306,6 +308,9 @@ int main() {
     cudaFree( d_nout_result);
     cudaFree( d_oatt5_llinenum);
     cudaFree( d_oatt1_countlli);
+    cudaFreeHost( iatt5_llinenum );  ///
+    cudaFreeHost( oatt5_llinenum );  ///
+    cudaFreeHost( oatt1_countlli );  ///
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();

@@ -134,7 +134,7 @@ void read_file ( const char* filepath, void* buf) {
     }
     size_t filesize;
     read(fd, &filesize, 8);
-    read(fd, buf, filesize - 8);
+    read(fd, buf, filesize - 8);  /// skipping the first 8 byte -- the meta.
     close(fd);
 }
 
