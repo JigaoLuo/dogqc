@@ -81,6 +81,20 @@ void* map_memory_file ( const char* filepath ) {
     return (void*)(map+8);
 }
 
+void* map_memory_file ( const char* filepath,  size_t& filesize) {
+    int fd = open(filepath, O_RDWR, (mode_t)0600);
+    if (fd == -1) {
+        ERROR("Opening file")
+    }
+    read(fd, &filesize, 8);
+    char* map = (char*)mmap(0, filesize, PROT_READ, MAP_SHARED, fd, 0);
+    if (map == MAP_FAILED) {
+        close(fd);
+        ERROR("mmapping the file");
+    }
+    return (void*)(map+8);
+}
+
 
 void unmap_memory_file ( void* ptr ) {
     size_t* baseptr = ((size_t*)(ptr))-1;
