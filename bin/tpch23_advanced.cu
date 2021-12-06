@@ -163,8 +163,10 @@ __global__ void krnl_lineitem1(
 }
 
 int main() {
+    size_t filesize;
     int* iatt5_llinenum;
-    iatt5_llinenum = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber" );
+    iatt5_llinenum = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber", filesize );
+std::cout << "filesize: " << filesize << std::endl;
 
     int nout_result;
     /// std::vector < int > oatt5_llinenum(6001215);
