@@ -179,7 +179,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        initArray<<<gridsize, blocksize>>>(d_agg1, 0.0f, 12002430);
+        initArray<<<gridsize, blocksize>>>(d_agg1, 0.0, 12002430);
     }
     {
         int gridsize=920;
