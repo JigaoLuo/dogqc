@@ -1,0 +1,17 @@
+
+Result: 7 tuples
+l_linenumber:        2  sum_l_suppkey:   6423062528.00  
+l_linenumber:        3  sum_l_suppkey:   5356478464.00  
+l_linenumber:        7  sum_l_suppkey:   1073600000.00  
+l_linenumber:        5  sum_l_suppkey:   3217826816.00  
+l_linenumber:        6  sum_l_suppkey:   2144840320.00  
+l_linenumber:        4  sum_l_suppkey:   4287839232.00  
+l_linenumber:        1  sum_l_suppkey:   7502428672.00  
+
+<timing>
+                  krnl_lineitem1:    3.2 ms
+               krnl_aggregation2:    1.7 ms
+                          finish:    0.0 ms
+                 totalKernelTime:    4.8 ms
+</timing>
+

@@ -1,0 +1,17 @@
+
+Result: 7 tuples
+l_linenumber:        2  sum_l_quantity:     32782732.00  
+l_linenumber:        3  sum_l_quantity:     27345028.00  
+l_linenumber:        7  sum_l_quantity:      5485440.00  
+l_linenumber:        5  sum_l_quantity:     16411322.00  
+l_linenumber:        6  sum_l_quantity:     10937358.00  
+l_linenumber:        4  sum_l_quantity:     21855208.00  
+l_linenumber:        1  sum_l_quantity:     38236480.00  
+
+<timing>
+                  krnl_lineitem1:    3.2 ms
+               krnl_aggregation2:    1.7 ms
+                          finish:    0.0 ms
+                 totalKernelTime:    4.8 ms
+</timing>
+
