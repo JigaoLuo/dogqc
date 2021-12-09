@@ -301,6 +301,7 @@ int main() {
         printf("[...]\n");
     }
     printf("\n");
+    std::clock_t stop_finish3 = std::clock();
 
     /// 40 sorted output
     std::map<int, int> ht;
@@ -322,7 +323,6 @@ int main() {
         printf("[...]\n");
     }
     printf("\n");
-    std::clock_t stop_finish3 = std::clock();
 
     printf("<timing>\n");
     printf ( "%32s: %6.1f ms\n", "krnl_lineitem1", (stop_krnl_lineitem11 - start_krnl_lineitem11) / (double) (CLOCKS_PER_SEC / 1000) );
