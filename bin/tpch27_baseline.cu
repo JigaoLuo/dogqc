@@ -307,16 +307,17 @@ int main() {
     for ( int pv = 0; pv < nout_result; pv += 1) {
         ht.emplace(oatt2_lorderke[pv], oatt1_countlor[pv]);
     }
-    for ( int pv = 0; ((pv < 40) && (pv < ht.size())); pv += 1) {
+    for ( int pv = 0, auto it = ht.begin(); ((pv < 40) && (pv < ht.size())); pv += 1) {
         printf("l_orderkey: ");
-        printf("%8i", ht[pv].first);
+        printf("%8i", it.first);
         printf("  ");
         printf("count_l_orderkey: ");
-        printf("%8i", ht[pv].second);
+        printf("%8i", it.second);
         printf("  ");
         printf("\n");
+        std::advance(it, 1);
     }
-    if((nout_result > 40)) {
+    if((ht.size() > 40)) {
         printf("[...]\n");
     }
     printf("\n");
