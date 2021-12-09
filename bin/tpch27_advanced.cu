@@ -327,7 +327,7 @@ int main() {
         ht.emplace(oatt2_lorderke[pv], oatt1_countlor[pv]);
     }
     auto it = ht.begin();
-    printf("\nResult: %i tuples\n", ht.size());
+    printf("\nResult: %ld tuples\n", ht.size());
     for ( int pv = 0; ((pv < 25) && (pv < ht.size())); pv += 1) {
         printf("l_orderkey: ");
         printf("%8i", it->first);
