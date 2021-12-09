@@ -1,3 +1,9 @@
+/// select l_orderkey, count(*)
+/// from lineitem
+/// group by l_orderkey
+/// order by l_orderkey
+#include <map>
+
 #include <list>
 #include <unordered_map>
 #include <vector>
@@ -292,6 +298,25 @@ int main() {
         printf("\n");
     }
     if((nout_result > 10)) {
+        printf("[...]\n");
+    }
+    printf("\n");
+
+    /// 40 sorted output
+    std::map<int, int> ht;
+    for ( int pv = 0; pv < nout_result; pv += 1) {
+        ht.emplace(oatt2_lorderke[pv], oatt1_countlor[pv]);
+    }
+    for ( int pv = 0; ((pv < 40) && (pv < ht.size())); pv += 1) {
+        printf("l_orderkey: ");
+        printf("%8i", oatt2_lorderke[pv]);
+        printf("  ");
+        printf("count_l_orderkey: ");
+        printf("%8i", oatt1_countlor[pv]);
+        printf("  ");
+        printf("\n");
+    }
+    if((nout_result > 40)) {
         printf("[...]\n");
     }
     printf("\n");
