@@ -310,10 +310,10 @@ int main() {
     auto it = ht.begin();
     for ( int pv = 0; ((pv < 40) && (pv < ht.size())); pv += 1) {
         printf("l_orderkey: ");
-        printf("%8i", it.first);
+        printf("%8i", it->first);
         printf("  ");
         printf("count_l_orderkey: ");
-        printf("%8i", it.second);
+        printf("%8i", it->second);
         printf("  ");
         printf("\n");
         std::advance(it, 1);
