@@ -96,7 +96,7 @@ __global__ void krnl_lineitem1(
                 int bucketFound = 0;
                 int numLookups = 0;
                 while(!(bucketFound)) {
-                    bucket = hashAggregateGetBucket ( aht2, 12002430, hash2, numLookups, &(payl));
+                    bucket = hashAggregateGetBucket ( aht2, HT_SIZE, hash2, numLookups, &(payl));  ///
                     apayl2 probepayl = aht2[bucket].payload;
                     bucketFound = 1;
                     bucketFound &= ((payl.att2_lorderke == probepayl.att2_lorderke));
