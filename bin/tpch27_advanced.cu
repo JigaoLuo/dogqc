@@ -127,7 +127,7 @@ __global__ void krnl_lineitem1(
         int active = 0;
         while(!(flushPipeline)) {
             tid_aggregation2 = loopVar;
-            active = (loopVar < 12002430);
+            active = (loopVar < HT_SIZE);  ///
             // flush pipeline if no new elements
             flushPipeline = !(__ballot_sync(ALL_LANES,active));
             if(active) {
