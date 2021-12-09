@@ -261,8 +261,7 @@ int main() {
     std::clock_t start_totalKernelTime0 = std::clock();
     {
         /// int gridsize=920;
-        /// int blocksize=128;
-        int blocksize=128*8;
+        int blocksize=128;
         int gridsize = (6001215 + blocksize - 1) / blocksize;
         krnl_lineitem1<<<gridsize, blocksize>>>(d_iatt2_lorderke, d_nout_result, d_oatt2_lorderke, d_oatt1_countlor);
     }
