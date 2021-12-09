@@ -29,7 +29,7 @@ __global__ void krnl_lineitem1(
     int* iatt2_lorderke, int* nout_result, int* oatt2_lorderke, int* oatt1_countlor) {  ///
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
-    const int HT_SIZE = 128;
+    const int HT_SIZE = 1280;
     __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
     __shared__ int agg1[HT_SIZE];  ///
     const int shared_memory_usage = sizeof(aht2) + sizeof(agg1);
