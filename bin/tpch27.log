@@ -1,0 +1,21 @@
+
+Result: 1500000 tuples
+l_orderkey:  2975686  count_l_orderkey:        7  
+l_orderkey:  2834080  count_l_orderkey:        5  
+l_orderkey:  2872353  count_l_orderkey:        4  
+l_orderkey:   173028  count_l_orderkey:        5  
+l_orderkey:  1880738  count_l_orderkey:        5  
+l_orderkey:  4884389  count_l_orderkey:        7  
+l_orderkey:  4766980  count_l_orderkey:        7  
+l_orderkey:  2517607  count_l_orderkey:        3  
+l_orderkey:  4817665  count_l_orderkey:        6  
+l_orderkey:  3575042  count_l_orderkey:        7  
+[...]
+
+<timing>
+                  krnl_lineitem1:    6.9 ms
+               krnl_aggregation2:    2.0 ms
+                          finish:    0.0 ms
+                 totalKernelTime:    8.9 ms
+</timing>
+
