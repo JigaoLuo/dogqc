@@ -298,7 +298,7 @@ int main() {
         printf("\n");
     }
     if((nout_result > 10)) {
-        printf("[...]\n");
+        printf("[...unsorted...]\n");
     }
     printf("\n");
     std::clock_t stop_finish3 = std::clock();
@@ -320,7 +320,7 @@ int main() {
         std::advance(it, 1);
     }
     if((ht.size() > 25)) {
-        printf("[...]\n");
+        printf("[...sorted...]\n");
     }
     printf("\n");
 
