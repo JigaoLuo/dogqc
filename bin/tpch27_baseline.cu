@@ -308,7 +308,7 @@ int main() {
         ht.emplace(oatt2_lorderke[pv], oatt1_countlor[pv]);
     }
     auto it = ht.begin();
-    for ( int pv = 0; ((pv < 40) && (pv < ht.size())); pv += 1) {
+    for ( int pv = 0; ((pv < 25) && (pv < ht.size())); pv += 1) {
         printf("l_orderkey: ");
         printf("%8i", it->first);
         printf("  ");
@@ -318,7 +318,7 @@ int main() {
         printf("\n");
         std::advance(it, 1);
     }
-    if((ht.size() > 40)) {
+    if((ht.size() > 25)) {
         printf("[...]\n");
     }
     printf("\n");
