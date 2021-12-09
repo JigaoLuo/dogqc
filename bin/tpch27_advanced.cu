@@ -263,7 +263,7 @@ int main() {
         int gridsize=920;
         ///int blocksize=128;
         int blocksize=1280;
-        krnl_lineitem1<<<(6001215 + 127) / blocksize, blocksize>>>(d_iatt2_lorderke, d_nout_result, d_oatt2_lorderke, d_oatt1_countlor);
+        krnl_lineitem1<<<(6001215 + blocksize - 1) / blocksize, blocksize>>>(d_iatt2_lorderke, d_nout_result, d_oatt2_lorderke, d_oatt1_countlor);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_totalKernelTime0 = std::clock();
