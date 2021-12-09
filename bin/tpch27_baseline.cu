@@ -307,7 +307,8 @@ int main() {
     for ( int pv = 0; pv < nout_result; pv += 1) {
         ht.emplace(oatt2_lorderke[pv], oatt1_countlor[pv]);
     }
-    for ( int pv = 0, auto it = ht.begin(); ((pv < 40) && (pv < ht.size())); pv += 1) {
+    auto it = ht.begin();
+    for ( int pv = 0; ((pv < 40) && (pv < ht.size())); pv += 1) {
         printf("l_orderkey: ");
         printf("%8i", it.first);
         printf("  ");
