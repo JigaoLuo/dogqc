@@ -250,7 +250,7 @@ __global__ void krnl_reduce2(
         writeMask = __ballot_sync(ALL_LANES,active);
         numProj = __popc(writeMask);
         if((warplane == 0)) {
-            wp = atomicAdd(n_final_out_result, numProj);
+            wp = atomicAdd(n_final_out_result, numProj);  ///
         }
         wp = __shfl_sync(ALL_LANES,wp,0);
         wp = (wp + __popc((writeMask & prefixlanes)));
@@ -514,7 +514,7 @@ int main() {
     printf("<timing>\n");
     printf ( "%32s: %6.1f ms\n", "finish", (stop_finish3 - start_finish3) / (double) (CLOCKS_PER_SEC / 1000) );
     printf ( "%32s: %6.1f ms\n", "totalKernelTime", (stop_totalKernelTime0 - start_totalKernelTime0) / (double) (CLOCKS_PER_SEC / 1000) );
-    printf ( "%32s: %6.1f ms\n", "krnl_reduce1", (stop_krnl_reduce1 - start_krnl_reduce1) / (double) (CLOCKS_PER_SEC / 1000) );
-    printf ( "%32s: %6.1f ms\n", "krnl_reduce2", (stop_krnl_reduce2 - start_krnl_reduce2) / (double) (CLOCKS_PER_SEC / 1000) );
+    printf ( "%32s: %6.1f ms\n", "krnl_reduce1", (stop_krnl_reduce1 - start_krnl_reduce1) / (double) (CLOCKS_PER_SEC / 1000) );  ///
+    printf ( "%32s: %6.1f ms\n", "krnl_reduce2", (stop_krnl_reduce2 - start_krnl_reduce2) / (double) (CLOCKS_PER_SEC / 1000) );  ///
     printf("</timing>\n");
 }
