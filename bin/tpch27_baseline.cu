@@ -226,7 +226,7 @@ int main() {
     std::clock_t start_krnl_lineitem11 = std::clock();
     {
         int gridsize=920;
-        int blocksize=128;
+        int blocksize=1024;  ///
         krnl_lineitem1<<<gridsize, blocksize>>>(d_iatt2_lorderke, d_aht2, d_agg1);
     }
     cudaDeviceSynchronize();
@@ -242,7 +242,7 @@ int main() {
     std::clock_t start_krnl_aggregation22 = std::clock();
     {
         int gridsize=920;
-        int blocksize=128;
+        int blocksize=1024;  ///
         krnl_aggregation2<<<gridsize, blocksize>>>(d_aht2, d_agg1, d_nout_result, d_oatt2_lorderke, d_oatt1_countlor);
     }
     cudaDeviceSynchronize();
