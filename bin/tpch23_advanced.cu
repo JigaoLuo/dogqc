@@ -168,7 +168,7 @@ __global__ void krnl_lineitem1(
 
 
 __global__ void krnl_reduce1(  ///
-    int* oatt5_llinenum, int* oatt1_countlli, agg_ht<apayl2>* aht2, int* agg1) {  ///
+    int* oatt5_llinenum, int* oatt1_countlli, agg_ht<apayl2>* aht2, int* agg1, int* nout_result) {  ///
     int att5_llinenum;  ///
     int att1_countlli;  ///
 
@@ -179,7 +179,7 @@ __global__ void krnl_reduce1(  ///
     int active = 0;
     while(!(flushPipeline)) {
         tid_lineitem1 = loopVar;
-        active = (loopVar < 6440);
+        active = (loopVar < *nout_result);  ///
         // flush pipeline if no new elements
         flushPipeline = !(__ballot_sync(ALL_LANES,active));
         if(active) {
@@ -199,7 +199,7 @@ __global__ void krnl_reduce1(  ///
             int bucketFound = 0;
             int numLookups = 0;
             while(!(bucketFound)) {
-                bucket = hashAggregateGetBucket ( aht2, 6440 * 2, hash2, numLookups, &(payl));
+                bucket = hashAggregateGetBucket ( aht2, *nout_result * 2, hash2, numLookups, &(payl));  ///
                 apayl2 probepayl = aht2[bucket].payload;
                 bucketFound = 1;
                 bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
@@ -213,7 +213,7 @@ __global__ void krnl_reduce1(  ///
 }
 
 __global__ void krnl_reduce2(
-        agg_ht<apayl2>* aht2, int* agg1, int* n_final_out_result, int* oatt5_llinenum, int* oatt1_countlli) {
+        agg_ht<apayl2>* aht2, int* agg1, int* n_final_out_result, int* oatt5_llinenum, int* oatt1_countlli, int* nout_result) {
     int att5_llinenum;  ///
     int att1_countlli;  ///
     unsigned warplane = (threadIdx.x % 32);
@@ -226,7 +226,7 @@ __global__ void krnl_reduce2(
     int active = 0;
     while(!(flushPipeline)) {
         tid_aggregation2 = loopVar;
-        active = (loopVar < 6440 * 2);
+        active = (loopVar < *nout_result * 2);  ///
         // flush pipeline if no new elements
         flushPipeline = !(__ballot_sync(ALL_LANES,active));
         if(active) {
@@ -261,10 +261,6 @@ __global__ void krnl_reduce2(
         loopVar += step;
     }
 }
-
-
-
-
 
 int main() {
     int* iatt5_llinenum;
@@ -410,14 +406,14 @@ int main() {
 
     /// output size is less than d_nout_result OR nout_result
     agg_ht<apayl2>* d_aht2;
-    cudaMalloc((void**) &d_aht2, 6440 * 2 * sizeof(agg_ht<apayl2>) );
+    cudaMalloc((void**) &d_aht2, nout_result * 2 * sizeof(agg_ht<apayl2>) );
     {
         int gridsize=920;
         int blocksize=128;
-        initAggHT<<<gridsize, blocksize>>>(d_aht2, 6440 * 2 );
+        initAggHT<<<gridsize, blocksize>>>(d_aht2, nout_result * 2 );
     }
     int* d_agg1;
-    cudaMalloc((void**) &d_agg1, 6440 * 2 * sizeof(int) );
+    cudaMalloc((void**) &d_agg1, nout_result * 2 * sizeof(int) );
     {
         int gridsize=920;
         int blocksize=128;
@@ -441,7 +437,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_reduce1<<<gridsize, blocksize>>>(d_oatt5_llinenum, d_oatt1_countlli, d_aht2, d_agg1);
+        krnl_reduce1<<<gridsize, blocksize>>>(d_oatt5_llinenum, d_oatt1_countlli, d_aht2, d_agg1, d_nout_result);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_reduce1 = std::clock();
@@ -457,7 +453,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_reduce2<<<gridsize, blocksize>>>(d_aht2, d_agg1, d_final_nout_result, d_final_oatt5_llinenum, d_final_oatt1_countlli);
+        krnl_reduce2<<<gridsize, blocksize>>>(d_aht2, d_agg1, d_final_nout_result, d_final_oatt5_llinenum, d_final_oatt1_countlli, d_nout_result);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_reduce2 = std::clock();
@@ -497,7 +493,7 @@ int main() {
 
     std::clock_t start_finish3 = std::clock();
     printf("\nResult: %i tuples\n", final_nout_result);  ///
-    if((nout_result > 6001215)) {
+    if((final_nout_result > 6001215)) {  ///
         ERROR("Index out of range. Output size larger than allocated with expected result number.")
     }
     for ( int pv = 0; ((pv < 10) && (pv < final_nout_result)); pv += 1) {  ///
