@@ -271,8 +271,9 @@ int main() {
     iatt5_llinenum = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber" );
 
     int nout_result;
-    /// std::vector < int > oatt5_llinenum(6001215);
-    /// std::vector < int > oatt1_countlli(6001215);
+    int final_nout_result;  ///
+    std::vector < int > oatt5_llinenum(6001215);
+    std::vector < int > oatt1_countlli(6001215);
 
     // wake up gpu
     cudaDeviceSynchronize();
@@ -291,10 +292,16 @@ int main() {
     /// Output: allocated as max group size: the same size as the lineitem table's cardinality.
     int* d_nout_result;
     cudaMalloc((void**) &d_nout_result, 1* sizeof(int) );
+    int* d_final_nout_result;  ///
+    cudaMalloc((void**) &d_final_nout_result, 1* sizeof(int) );  ///
     int* d_oatt5_llinenum;
     cudaMalloc((void**) &d_oatt5_llinenum, 6001215* sizeof(int) );
     int* d_oatt1_countlli;  /// For SQL projection.
     cudaMalloc((void**) &d_oatt1_countlli, 6001215* sizeof(int) );
+    int* d_final_oatt5_llinenum;  ///
+    cudaMalloc((void**) &d_final_oatt5_llinenum, 6001215* sizeof(int) );  ///
+    int* d_final_oatt1_countlli;  ///
+    cudaMalloc((void**) &d_final_oatt1_countlli, 6001215* sizeof(int) );  ///
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -389,7 +396,6 @@ int main() {
 
 
     ///
-    // TODO: reduce d_nout_result tuples in two kernel
     // input: d_oatt5_llinenum, d_oatt1_countlli
     cudaMemcpy( &nout_result, d_nout_result, 1 * sizeof(int), cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
@@ -403,31 +409,6 @@ int main() {
 
 
     /// output size is less than d_nout_result OR nout_result
-    int final_nout_result;
-    int* oatt5_llinenum;  ///
-    int* oatt1_countlli;  ///
-    cudaMallocHost((void**)&oatt5_llinenum, 6001215 * sizeof(int));  /// host pinned
-    cudaMallocHost((void**)&oatt1_countlli, 6001215 * sizeof(int));  /// host pinned
-    cudaDeviceSynchronize();
-    {
-        cudaError err = cudaGetLastError();
-        if(err != cudaSuccess) {
-            std::cerr << "Cuda Error in cudaMallocHost! " << cudaGetErrorString( err ) << std::endl;
-            ERROR("cudaMallocHost")
-        }
-    }
-
-    int* d_final_nout_result;
-    cudaMalloc((void**) &d_final_nout_result, 1* sizeof(int) );
-    cudaDeviceSynchronize();
-    {
-        cudaError err = cudaGetLastError();
-        if(err != cudaSuccess) {
-            std::cerr << "Cuda Error in cuda malloc! " << cudaGetErrorString( err ) << std::endl;
-            ERROR("cuda malloc")
-        }
-    }
-
     agg_ht<apayl2>* d_aht2;
     cudaMalloc((void**) &d_aht2, 6440 * 2 * sizeof(agg_ht<apayl2>) );
     {
@@ -440,7 +421,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        initArray<<<gridsize, blocksize>>>(d_agg1, 0, 6440 * 2 );
+        initArray<<<gridsize, blocksize>>>(d_agg1, 0, nout_result * 2 );
     }
     {
         int gridsize=920;
@@ -455,12 +436,6 @@ int main() {
             ERROR("cuda mallocHT")
         }
     }
-
-    int* d_final_oatt5_llinenum;
-    cudaMalloc((void**) &d_final_oatt5_llinenum, 6001215* sizeof(int) );
-    int* d_final_oatt1_countlli;
-    cudaMalloc((void**) &d_final_oatt1_countlli, 6001215* sizeof(int) );
-
 
     std::clock_t start_krnl_reduce1 = std::clock();
     {
@@ -489,8 +464,8 @@ int main() {
 
 
     cudaMemcpy( &final_nout_result, d_final_nout_result, 1 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt5_llinenum, d_final_oatt5_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt1_countlli, d_final_oatt1_countlli, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt5_llinenum.data(), d_final_oatt5_llinenum, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt1_countlli.data(), d_final_oatt1_countlli, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -521,11 +496,11 @@ int main() {
     }
 
     std::clock_t start_finish3 = std::clock();
-    printf("\nResult: %i tuples\n", nout_result);
+    printf("\nResult: %i tuples\n", final_nout_result);  ///
     if((nout_result > 6001215)) {
         ERROR("Index out of range. Output size larger than allocated with expected result number.")
     }
-    for ( int pv = 0; ((pv < 10) && (pv < nout_result)); pv += 1) {
+    for ( int pv = 0; ((pv < 10) && (pv < final_nout_result)); pv += 1) {  ///
         printf("l_linenumber: ");
         printf("%8i", oatt5_llinenum[pv]);
         printf("  ");
@@ -534,71 +509,16 @@ int main() {
         printf("  ");
         printf("\n");
     }
-    if((nout_result > 10)) {
-        printf("[...]\n");
-    }
-    printf("\n");
-    /// std::clock_t stop_finish3 = std::clock();
-
-    ///
-    printf("\nFinal Reduced Result: %i tuples\n", final_nout_result);
-    if((final_nout_result > 6001215)) {
-        ERROR("Index out of range. Output size larger than allocated with expected result number.")
-    }
-    for ( int pv = 0; ((pv < 10) && (pv < final_nout_result)); pv += 1) {
-        printf("l_linenumber: ");
-        printf("%8i", oatt5_llinenum[pv]);
-        printf("  ");
-        printf("count_l_linenumber: ");
-        printf("%8i", oatt1_countlli[pv]);
-        printf("  ");
-        printf("\n");
-    }
-    if((final_nout_result > 10)) {
+    if((final_nout_result > 10)) {  ///
         printf("[...]\n");
     }
     printf("\n");
     std::clock_t stop_finish3 = std::clock();
-    ///
-
-//    /// My Reduce
-//    std::cout << "MY REDUCE ON CPU (single-cpu-threaded)" << std::endl;
-//    std::clock_t start_cpu_reduce = std::clock();
-//    std::unordered_map<int, int> ht;
-//    for ( int pv = 0; (pv < nout_result); pv += 1 ) {
-//        ht[oatt5_llinenum[pv]] += oatt1_countlli[pv];
-//    }
-//    for (const auto& ele : ht) {
-//        printf("l_linenumber: ");
-//        printf("%8i", ele.first);
-//        printf("  ");
-//        printf("count_l_linenumber: ");
-//        printf("%8i", ele.second);
-//        printf("  ");
-//        printf("\n");
-//    }
-//    std::clock_t stop_cpu_reduce = std::clock();
-
-
-    {
-        ///
-        cudaFreeHost( oatt5_llinenum );  ///
-        cudaFreeHost( oatt1_countlli );  ///
-        cudaDeviceSynchronize();
-        {
-            cudaError err = cudaGetLastError();
-            if(err != cudaSuccess) {
-                std::cerr << "Cuda Error in cuda free host! " << cudaGetErrorString( err ) << std::endl;
-                ERROR("cuda free host")
-            }
-        }
-    }
 
     printf("<timing>\n");
     printf ( "%32s: %6.1f ms\n", "finish", (stop_finish3 - start_finish3) / (double) (CLOCKS_PER_SEC / 1000) );
     printf ( "%32s: %6.1f ms\n", "totalKernelTime", (stop_totalKernelTime0 - start_totalKernelTime0) / (double) (CLOCKS_PER_SEC / 1000) );
     printf ( "%32s: %6.1f ms\n", "krnl_reduce1", (stop_krnl_reduce1 - start_krnl_reduce1) / (double) (CLOCKS_PER_SEC / 1000) );
     printf ( "%32s: %6.1f ms\n", "krnl_reduce2", (stop_krnl_reduce2 - start_krnl_reduce2) / (double) (CLOCKS_PER_SEC / 1000) );
-//    printf ( "%32s: %6.1f ms\n", "reduce on CPU (single-cpu-threaded)", (stop_cpu_reduce - start_cpu_reduce) / (double) (CLOCKS_PER_SEC / 1000) );
     printf("</timing>\n");
 }
