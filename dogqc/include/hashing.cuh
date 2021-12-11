@@ -288,3 +288,12 @@ __device__ bool hashAggregateFindBucket ( agg_ht<T>* ht, int32_t ht_size, uint64
     }
     return true;
 }
+
+template <typename T>
+__global__ void analyzeAggHT ( agg_ht<T>* ht, int32_t ht_size, int* counter /* counter should be 0 */) {
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < ht_size; i += blockDim.x * gridDim.x) {
+        if (ht[i].hash != HASH_EMPTY) {
+            atomicAdd(counter, ((int)1));
+        }
+    }
+}
