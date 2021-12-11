@@ -27,3 +27,10 @@ void stringPrint ( char* chrs, str_offs s, FILE* fout=stdout, int nchars=10 ) {
         fputc ( chrs[s.start+i], fout );
 }
 
+int next_power_2(int i) {
+    int power = 1;
+    while (power < i) {
+        power *= 2;
+    }
+    return power;
+}
