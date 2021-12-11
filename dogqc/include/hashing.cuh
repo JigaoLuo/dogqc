@@ -299,7 +299,7 @@ __global__ void analyzeAggHT ( agg_ht<T>* ht, int32_t ht_size, int* counter /* c
     }
 }
 
-// returns candidate bucket
+// return the number of non-empty hash table slots.
 template <typename T>
 __device__ int analyzeAggHT ( agg_ht<T>* ht, int32_t ht_size ) {
     int counter = 0;
