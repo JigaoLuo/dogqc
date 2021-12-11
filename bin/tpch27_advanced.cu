@@ -24,13 +24,12 @@ struct apayl2 {
 };
 
 constexpr int SHARED_MEMORY_SIZE = 49152;  /// Total amount of shared memory per block:       49152 bytes
-
+const int HT_SIZE = 1024;  ///
 
 __global__ void krnl_lineitem1(
     int* iatt2_lorderke, int* nout_result, int* oatt2_lorderke, int* oatt1_countlor) {  ///
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
-    const int HT_SIZE = 1024;  ///
     __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
     __shared__ int agg1[HT_SIZE];  ///
 #ifdef COLLISION_PRINT
@@ -179,7 +178,7 @@ __global__ void krnl_lineitem1(
 }
 
 __global__ void krnl_reduce1(  ///
-        int* oatt2_lorderke, int* oatt1_countlor, agg_ht<apayl2>* aht2, int* agg1, int* nout_result) {  ///
+        int* oatt2_lorderke, int* oatt1_countlor, agg_ht<apayl2>* aht2, int* agg1, int* nout_result, int* d_reduce_hash_table_size) {  ///
     int att2_lorderke;  ///
     int att1_countlor;  ///
 
@@ -210,7 +209,7 @@ __global__ void krnl_reduce1(  ///
             int bucketFound = 0;
             int numLookups = 0;
             while(!(bucketFound)) {
-                bucket = hashAggregateGetBucket ( aht2, *nout_result * 2, hash2, numLookups, &(payl));  ///
+                bucket = hashAggregateGetBucket ( aht2, *d_reduce_hash_table_size, hash2, numLookups, &(payl));  ///
                 apayl2 probepayl = aht2[bucket].payload;
                 bucketFound = 1;
                 bucketFound &= ((payl.att2_lorderke == probepayl.att2_lorderke));
@@ -224,7 +223,7 @@ __global__ void krnl_reduce1(  ///
 }
 
 __global__ void krnl_reduce2(
-        agg_ht<apayl2>* aht2, int* agg1, int* n_final_out_result, int* oatt2_lorderke, int* oatt1_countlor, int* nout_result) {
+        agg_ht<apayl2>* aht2, int* agg1, int* n_final_out_result, int* oatt2_lorderke, int* oatt1_countlor, int* d_reduce_hash_table_size) {
     int att2_lorderke;  ///
     int att1_countlor;  ///
     unsigned warplane = (threadIdx.x % 32);
@@ -237,7 +236,7 @@ __global__ void krnl_reduce2(
     int active = 0;
     while(!(flushPipeline)) {
         tid_aggregation2 = loopVar;
-        active = (loopVar < *nout_result * 2);  ///
+        active = (loopVar < *d_reduce_hash_table_size);  ///
         // flush pipeline if no new elements
         flushPipeline = !(__ballot_sync(ALL_LANES,active));
         if(active) {
@@ -306,6 +305,8 @@ int main() {
     cudaMalloc((void**) &d_final_oatt2_lorderke, 6001215* sizeof(int) );  ///
     int* d_final_oatt1_countlor;  ///
     cudaMalloc((void**) &d_final_oatt1_countlor, 6001215* sizeof(int) );  ///
+    int* d_reduce_hash_table_size;  ///
+    cudaMalloc((void**) &d_reduce_hash_table_size, 1* sizeof(int) );  ///
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -336,6 +337,11 @@ int main() {
         int gridsize=920;
         int blocksize=128;
         initArray<<<gridsize, blocksize>>>(d_nout_result, 0, 1);
+    }
+    {
+        int gridsize=920;  ///
+        int blocksize=128;  ///
+        initArray<<<gridsize, blocksize>>>(d_reduce_hash_table_size, 0, 0);  ///
     }
     cudaDeviceSynchronize();
     {
@@ -397,6 +403,10 @@ int main() {
     ///
     // input: d_oatt2_lorderke, d_oatt1_countlor
     cudaMemcpy( &nout_result, d_nout_result, 1 * sizeof(int), cudaMemcpyDeviceToHost);
+    int reduce_hash_table_size = next_power_2(nout_result) * 2;  ///
+    cudaMemcpy( d_reduce_hash_table_size, &reduce_hash_table_size, 1 * sizeof(int), cudaMemcpyHostToDevice);  ///
+    std::cout << "The size before reduce: " << nout_result << std::endl;  ///
+    std::cout << "The size of reduce hash table: " << reduce_hash_table_size << std::endl;  ///
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -408,18 +418,18 @@ int main() {
 
     /// output size is less than d_nout_result OR nout_result
     agg_ht<apayl2>* d_aht2;
-    cudaMalloc((void**) &d_aht2, nout_result * 2 * sizeof(agg_ht<apayl2>) );
+    cudaMalloc((void**) &d_aht2, reduce_hash_table_size * sizeof(agg_ht<apayl2>) );
     {
         int gridsize=920;
         int blocksize=128;
-        initAggHT<<<gridsize, blocksize>>>(d_aht2, nout_result * 2 );
+        initAggHT<<<gridsize, blocksize>>>(d_aht2, reduce_hash_table_size );
     }
     int* d_agg1;
-    cudaMalloc((void**) &d_agg1, nout_result * 2 * sizeof(int) );
+    cudaMalloc((void**) &d_agg1, reduce_hash_table_size * sizeof(int) );
     {
         int gridsize=920;
         int blocksize=128;
-        initArray<<<gridsize, blocksize>>>(d_agg1, 0, nout_result * 2 );
+        initArray<<<gridsize, blocksize>>>(d_agg1, 0, reduce_hash_table_size );
     }
     {
         int gridsize=920;
@@ -439,7 +449,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_reduce1<<<gridsize, blocksize>>>(d_oatt2_lorderke, d_oatt1_countlor, d_aht2, d_agg1, d_nout_result);
+        krnl_reduce1<<<gridsize, blocksize>>>(d_oatt2_lorderke, d_oatt1_countlor, d_aht2, d_agg1, d_nout_result, d_reduce_hash_table_size);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_reduce1 = std::clock();
@@ -455,7 +465,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_reduce2<<<gridsize, blocksize>>>(d_aht2, d_agg1, d_final_nout_result, d_final_oatt2_lorderke, d_final_oatt1_countlor, d_nout_result);
+        krnl_reduce2<<<gridsize, blocksize>>>(d_aht2, d_agg1, d_final_nout_result, d_final_oatt2_lorderke, d_final_oatt1_countlor, d_reduce_hash_table_size);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_reduce2 = std::clock();
