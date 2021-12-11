@@ -5,7 +5,7 @@
 /// order by l_orderkey
 #include <map>
 #include <cassert>
-#define COLLISION_PRINT
+//#define COLLISION_PRINT
 
 #include <list>
 #include <unordered_map>

@@ -4,7 +4,7 @@
 /// group by l_linenumber
 #include <unordered_set>
 #include <cassert>
-#define COLLISION_PRINT
+//#define COLLISION_PRINT
 
 #include <list>
 #include <unordered_map>
