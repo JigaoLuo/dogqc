@@ -312,3 +312,117 @@ __device__ int analyzeAggHT ( agg_ht<T>* ht, int32_t ht_size ) {
     }
     return counter;
 }
+
+///
+
+/*
+ A lock that ensures that a section is only executed once.
+ E.g. assigning the key to a ht entry
+ */
+struct OnceLock_SM {
+
+    static const unsigned LOCK_FRESH   = 0;
+    static const unsigned LOCK_WORKING = 1;
+    static const unsigned LOCK_DONE    = 2;
+
+    volatile unsigned lock;
+
+    __device__ void init() {
+        lock = LOCK_FRESH;
+    }
+
+    __device__ bool enter() {
+        unsigned lockState = atomicCAS ( (unsigned*) &lock, LOCK_FRESH, LOCK_WORKING );
+        return lockState == LOCK_FRESH;
+    }
+
+    __device__ __forceinline__ void done() {
+        lock = LOCK_DONE;
+    }
+
+    __device__ void wait() {
+        while ( lock != LOCK_DONE );
+    }
+};
+template <typename T>
+struct agg_ht_sm {
+    OnceLock_SM lock;
+    uint64_t hash;
+    T payload;
+};
+
+
+template <typename T>
+__global__ void initAggHT ( agg_ht_sm<T>* ht, int32_t num ) {
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num; i += blockDim.x * gridDim.x) {
+        ht[i].lock.init();
+        ht[i].hash = HASH_EMPTY;
+    }
+}
+
+
+// returns candidate bucket
+template <typename T>
+__device__ int hashAggregateGetBucket ( agg_ht_sm<T>* ht, int32_t ht_size, uint64_t grouphash, int& numLookups, T* payl ) {
+    int location=-1;
+    bool done=false;
+    while ( !done ) {
+        location = ( grouphash + numLookups ) % ht_size;
+        agg_ht_sm<T>& entry = ht [ location ];
+        numLookups++;
+        if ( entry.lock.enter() ) {
+            entry.payload = *payl;
+            entry.hash = grouphash;
+            entry.lock.done();
+        }
+        entry.lock.wait();
+        done = (entry.hash == grouphash);
+        if ( numLookups == ht_size ) {
+            printf ( "hash table full\n" );
+            break;
+        }
+    }
+    return location;
+}
+
+
+// return value indicates if more candidate buckets exist
+// location used as return value for payload location
+template <typename T>
+__device__ bool hashAggregateFindBucket ( agg_ht_sm<T>* ht, int32_t ht_size, uint64_t grouphash, int& numLookups, int& location ) {
+    location=-1;
+    bool done=false;
+    while ( !done ) {
+        location = ( grouphash + numLookups++ ) % ht_size;
+        if ( ht [ location ].hash == HASH_EMPTY ) {
+            return false;
+        }
+        done = ( ht [ location ].hash == grouphash);
+
+    }
+    return true;
+}
+
+// return the number of non-empty hash table slots.
+template <typename T>
+__global__ void analyzeAggHT ( agg_ht_sm<T>* ht, int32_t ht_size, int* counter /* counter should be 0 */) {
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < ht_size; i += blockDim.x * gridDim.x) {
+        if (ht[i].hash != HASH_EMPTY) {
+            atomicAdd(counter, ((int)1));
+        }
+    }
+}
+
+// return the number of non-empty hash table slots.
+template <typename T>
+__device__ int analyzeAggHT ( agg_ht_sm<T>* ht, int32_t ht_size ) {
+    int counter = 0;
+    int location = 0;
+    while ( location < ht_size ) {
+        if (ht[ location ].hash != HASH_EMPTY) {
+            ++counter;
+        }
+        ++location;
+    }
+    return counter;
+}
