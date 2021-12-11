@@ -4,6 +4,7 @@
 /// group by l_linenumber
 #include <unordered_set>
 #include <cassert>
+//#define COLLISION_PRINT
 
 #include <list>
 #include <unordered_map>
@@ -29,6 +30,9 @@ __global__ void krnl_lineitem1(
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
     const int HT_SIZE = 128;
     __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
+#ifdef COLLISION_PRINT
+    __shared__ int num_collision; num_collision = 0;
+#endif
     const int shared_memory_usage = sizeof(aht2);
     assert(shared_memory_usage <= SHARED_MEMORY_SIZE);  /// Check stuff fits into shared memory in a SM.
     if (threadIdx.x == 0 && blockIdx.x == 0) {
@@ -86,6 +90,9 @@ __global__ void krnl_lineitem1(
                     bucketFound = 1;
                     bucketFound &= ((payl.att4_llinenum == probepayl.att4_llinenum));
                 }
+#ifdef COLLISION_PRINT
+                atomicAdd(&num_collision, numLookups - 1);
+#endif
             }
             if(active) {
             }
@@ -94,6 +101,12 @@ __global__ void krnl_lineitem1(
     }
 
     __syncthreads();  ///
+#ifdef COLLISION_PRINT
+    if (threadIdx.x == 0) {
+        /// Allow only one print per block here.
+        printf("In Block %d: num_collision: %d\n", blockIdx.x, num_collision);
+    }
+#endif
 
     {
         /// The second old kernel

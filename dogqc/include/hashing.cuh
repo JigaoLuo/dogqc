@@ -288,3 +288,27 @@ __device__ bool hashAggregateFindBucket ( agg_ht<T>* ht, int32_t ht_size, uint64
     }
     return true;
 }
+
+// return the number of non-empty hash table slots.
+template <typename T>
+__global__ void analyzeAggHT ( agg_ht<T>* ht, int32_t ht_size, int* counter /* counter should be 0 */) {
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < ht_size; i += blockDim.x * gridDim.x) {
+        if (ht[i].hash != HASH_EMPTY) {
+            atomicAdd(counter, ((int)1));
+        }
+    }
+}
+
+// return the number of non-empty hash table slots.
+template <typename T>
+__device__ int analyzeAggHT ( agg_ht<T>* ht, int32_t ht_size ) {
+    int counter = 0;
+    int location = 0;
+    while ( location < ht_size ) {
+        if (ht[ location ].hash != HASH_EMPTY) {
+            ++counter;
+        }
+        ++location;
+    }
+    return counter;
+}
