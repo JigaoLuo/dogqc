@@ -30,7 +30,7 @@ __global__ void krnl_lineitem1(
     int* iatt2_lorderke, int* nout_result, int* oatt2_lorderke, int* oatt1_countlor) {  ///
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
-    __shared__ agg_ht<apayl2> aht2[HT_SIZE];  ///
+    __shared__ agg_ht_sm<apayl2> aht2[HT_SIZE];  ///
     __shared__ int agg1[HT_SIZE];  ///
 #ifdef COLLISION_PRINT
     __shared__ int num_collision; num_collision = 0;
