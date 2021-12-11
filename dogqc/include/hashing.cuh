@@ -298,3 +298,17 @@ __global__ void analyzeAggHT ( agg_ht<T>* ht, int32_t ht_size, int* counter /* c
         }
     }
 }
+
+// returns candidate bucket
+template <typename T>
+__device__ int analyzeAggHT ( agg_ht<T>* ht, int32_t ht_size ) {
+    int counter = 0;
+    int location = 0;
+    while ( location < ht_size ) {
+        if (ht[ location ].hash != HASH_EMPTY) {
+            ++counter;
+        }
+        ++location;
+    }
+    return counter;
+}
