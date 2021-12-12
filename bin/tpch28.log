@@ -1,0 +1,21 @@
+
+Result: 10000 tuples
+l_suppkey:     6071  count_l_suppkey:      579  
+l_suppkey:     7829  count_l_suppkey:      594  
+l_suppkey:     3980  count_l_suppkey:      584  
+l_suppkey:     5449  count_l_suppkey:      616  
+l_suppkey:     7793  count_l_suppkey:      604  
+l_suppkey:     5203  count_l_suppkey:      598  
+l_suppkey:     5329  count_l_suppkey:      574  
+l_suppkey:     5420  count_l_suppkey:      600  
+l_suppkey:     3505  count_l_suppkey:      600  
+l_suppkey:     8081  count_l_suppkey:      569  
+[...]
+
+<timing>
+                  krnl_lineitem1:   15.7 ms
+               krnl_aggregation2:    1.7 ms
+                          finish:    0.0 ms
+                 totalKernelTime:   17.3 ms
+</timing>
+
