@@ -25,7 +25,7 @@ struct apayl2 {
 constexpr int SHARED_MEMORY_SIZE = 49152;  /// Total amount of shared memory per block:       49152 bytes
 const int HT_SIZE = 128;  ///
 //constexpr int GLOBAL_HT_SIZE = 12002430;  /// In global memory
-constexpr int GLOBAL_HT_SIZE = 16384;  /// In global memory TODO: change ti
+constexpr int GLOBAL_HT_SIZE = 16384;  /// In global memory
 
 __global__ void krnl_lineitem1(
     int* iatt4_lsuppkey, int* nout_result, int* oatt4_lsuppkey, int* oatt1_countlsu, agg_ht<apayl2>* g_aht2, int* g_agg1) {  ///
