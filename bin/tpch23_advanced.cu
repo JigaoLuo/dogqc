@@ -114,6 +114,16 @@ __global__ void krnl_lineitem1(
 #ifdef COLLISION_PRINT
                 atomicAdd(&num_collision, numLookups - 1);
 #endif
+
+#ifdef HT_CHECKER
+                if (threadIdx.x == 0) {
+        if (migration_to_global_memory != 0) {
+            printf("FUll.\n");
+        } else {
+            printf("Not FULL.\n");
+        }
+    }
+#endif
             }
             if(active && bucket != -1) {  ////
                 atomicAdd(&(agg1[bucket]), ((int)1));

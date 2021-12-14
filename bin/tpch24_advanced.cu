@@ -143,6 +143,16 @@ __global__ void krnl_lineitem1(
     }
 #endif
 
+#ifdef HT_CHECKER
+    if (threadIdx.x == 0) {
+        if (migration_to_global_memory != 0) {
+            printf("FUll.\n");
+        } else {
+            printf("Not FULL.\n");
+        }
+    }
+#endif
+
     /// Copy the shared memory hash table (pre-aggreagation) into the global hash table.
     {
         /// <-- START: first half of the kernel 2
