@@ -5,6 +5,7 @@
 #include <map>
 #include <cassert>
 //#define COLLISION_PRINT
+//#define HT_CHECKER
 
 #include <list>
 #include <unordered_map>
@@ -154,6 +155,16 @@ __global__ void krnl_lineitem1(
     if (threadIdx.x == 0) {
         /// Allow only one print per block here.
         printf("In Block %d: num_collision: %d\n", blockIdx.x, num_collision);
+    }
+#endif
+
+#ifdef HT_CHECKER
+    if (threadIdx.x == 0) {
+        if (migration_to_global_memory != 0) {
+            printf("FUll.\n");
+        } else {
+            printf("Not FULL.\n");
+        }
     }
 #endif
 
