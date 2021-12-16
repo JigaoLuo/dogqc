@@ -365,9 +365,15 @@ __global__ void initAggHT ( agg_ht_sm<T>* ht, int32_t num ) {
 // returns candidate bucket
 template <typename T>
 __device__ int hashAggregateGetBucket ( agg_ht_sm<T>* ht, int32_t ht_size, uint64_t grouphash, int& numLookups, T* payl ) {
+    constexpr static int N_PROBE_LIMIT = 20;
     int location=-1;
     bool done=false;
     while ( !done ) {
+        if ( numLookups >= N_PROBE_LIMIT ) {
+//            printf ( "shared memory hash table reached probing limit %d: threadId %d, blockID %d \n", N_PROBE_LIMIT, threadIdx.x, blockIdx.x);
+            return -1;  /// flag for hash table being full
+        }
+
         location = ( grouphash + numLookups ) % ht_size;
         agg_ht_sm<T>& entry = ht [ location ];
         numLookups++;
@@ -378,32 +384,27 @@ __device__ int hashAggregateGetBucket ( agg_ht_sm<T>* ht, int32_t ht_size, uint6
         }
         entry.lock.wait();
         done = (entry.hash == grouphash);
-        if ( numLookups == ht_size ) {
-//            printf ( "hash table full\n" );
-            location=-1;  /// flag for hash table being full
-            break;
-        }
     }
     return location;
 }
 
 
-// return value indicates if more candidate buckets exist
-// location used as return value for payload location
-template <typename T>
-__device__ bool hashAggregateFindBucket ( agg_ht_sm<T>* ht, int32_t ht_size, uint64_t grouphash, int& numLookups, int& location ) {
-    location=-1;
-    bool done=false;
-    while ( !done ) {
-        location = ( grouphash + numLookups++ ) % ht_size;
-        if ( ht [ location ].hash == HASH_EMPTY ) {
-            return false;
-        }
-        done = ( ht [ location ].hash == grouphash);
-
-    }
-    return true;
-}
+//// return value indicates if more candidate buckets exist
+//// location used as return value for payload location
+//template <typename T>
+//__device__ bool hashAggregateFindBucket ( agg_ht_sm<T>* ht, int32_t ht_size, uint64_t grouphash, int& numLookups, int& location ) {
+//    location=-1;
+//    bool done=false;
+//    while ( !done ) {
+//        location = ( grouphash + numLookups++ ) % ht_size;
+//        if ( ht [ location ].hash == HASH_EMPTY ) {
+//            return false;
+//        }
+//        done = ( ht [ location ].hash == grouphash);
+//
+//    }
+//    return true;
+//}
 
 // return the number of non-empty hash table slots.
 template <typename T>
