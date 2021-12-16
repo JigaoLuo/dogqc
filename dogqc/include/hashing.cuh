@@ -222,7 +222,7 @@ struct OnceLock {
 
     __device__ void done() {
         __threadfence();
-	lock = LOCK_DONE;
+	    lock = LOCK_DONE;
         __threadfence();
     }
 
@@ -264,10 +264,9 @@ __device__ int hashAggregateGetBucket ( agg_ht<T>* ht, int32_t ht_size, uint64_t
         entry.lock.wait();
         done = (entry.hash == grouphash);
         if ( numLookups == ht_size ) {
-//            printf ( "hash table full\n" );
-            location=-1;  /// flag for hash table being full
+            printf ( "agg_ht hash table full at threadIdx %d & blockIdx %d \n", threadIdx.x, blockIdx.x );
             break;
-	}
+	    }
     }
     return location;
 }
@@ -337,8 +336,10 @@ struct OnceLock_SM {
         return lockState == LOCK_FRESH;
     }
 
-    __device__ __forceinline__ void done() {
+    __device__ void done() {
+        __threadfence_block();
         lock = LOCK_DONE;
+        __threadfence_block();
     }
 
     __device__ void wait() {
@@ -365,7 +366,7 @@ __global__ void initAggHT ( agg_ht_sm<T>* ht, int32_t num ) {
 // returns candidate bucket
 template <typename T>
 __device__ int hashAggregateGetBucket ( agg_ht_sm<T>* ht, int32_t ht_size, uint64_t grouphash, int& numLookups, T* payl ) {
-    constexpr static int N_PROBE_LIMIT = 20;
+    constexpr static int N_PROBE_LIMIT = 50;
     int location=-1;
     bool done=false;
     while ( !done ) {
