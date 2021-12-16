@@ -23,9 +23,9 @@ struct apayl2 {
 };
 
 constexpr int SHARED_MEMORY_SIZE = 49152;  /// Total amount of shared memory per block:       49152 bytes
-constexpr int HT_SIZE = 128 - 1;  /// In shared memory
-//constexpr int GLOBAL_HT_SIZE = 12002430;  /// In global memory
-constexpr int GLOBAL_HT_SIZE = 8192;  /// In global memory
+constexpr int HT_SIZE = 1024;  /// In shared memory
+constexpr int GLOBAL_HT_SIZE = 12002430;  /// In global memory
+//constexpr int GLOBAL_HT_SIZE = 8192;  /// In global memory
 
 __global__ void krnl_lineitem1(
     int* iatt5_llinenum, int* nout_result, int* oatt5_llinenum, int* oatt1_countlli, agg_ht<apayl2>* g_aht2, int* g_agg1) {  ///
@@ -33,7 +33,7 @@ __global__ void krnl_lineitem1(
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
     __shared__ agg_ht_sm<apayl2> aht2[HT_SIZE];  ///
     __shared__ int agg1[HT_SIZE];  ///
-    __shared__ int migration_to_global_memory; migration_to_global_memory = 0;  ////
+    volatile __shared__ int migration_to_global_memory; migration_to_global_memory = 0;  ////
 #ifdef COLLISION_PRINT
     __shared__ int num_collision; num_collision = 0;
 #endif
@@ -89,7 +89,7 @@ __global__ void krnl_lineitem1(
                 att5_llinenum = iatt5_llinenum[tid_lineitem1];
             }
             // -------- aggregation (opId: 2) --------
-            int bucket = -1;  ////
+            int bucket = 0;
             if(active) {
                 uint64_t hash2 = 0;
                 hash2 = 0;
@@ -100,15 +100,18 @@ __global__ void krnl_lineitem1(
                 payl.att5_llinenum = att5_llinenum;
                 int bucketFound = 0;
                 int numLookups = 0;
-                while(!(bucketFound) && migration_to_global_memory == 0) {   ////
+                while(!(bucketFound)) {   ////
                     bucket = hashAggregateGetBucket ( aht2, HT_SIZE, hash2, numLookups, &(payl));  ///
                     if (bucket != -1) {
                         apayl2 probepayl = aht2[bucket].payload;
                         bucketFound = 1;
                         bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
-                    }
-                    else {
-                        atomicAdd(&migration_to_global_memory, 1);  ////
+                    } else {
+                        assert(bucketFound == 0);  ////
+//                        loopVar -= step; TODO use this in other branch: copy ht first, then ...
+                        atomicAdd((int *)&migration_to_global_memory, 1);  ////
+                        bucket = -1;
+                        break;  ////
                     }
                 }
 #ifdef COLLISION_PRINT
@@ -129,8 +132,14 @@ __global__ void krnl_lineitem1(
                 atomicAdd(&(agg1[bucket]), ((int)1));
             }
 
+            /// Implication and Disjunction: P->Q <=>  ^P OR Q
+            /// bucket==-1 -> migration_to_global_memory!=0
+            assert(bucket != -1 || migration_to_global_memory != 0);
+
             //// insert the tuple into the global memory hash table.
-            if (bucket == -1 || migration_to_global_memory != 0) {  ////
+            //            if (bucket == -1 || migration_to_global_memory != 0) {  ////
+            if (bucket == -1) {  ////
+//            if (migration_to_global_memory != 0) {  ////
                 /// <-- START: second half of the kernel 1
                 if(active) {
                     uint64_t hash2 = 0;
