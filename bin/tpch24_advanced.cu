@@ -32,7 +32,7 @@ __global__ void krnl_lineitem1(
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
     __shared__ agg_ht_sm<apayl2> aht2[HT_SIZE];  ///
-    volatile __shared__ int migration_to_global_memory; migration_to_global_memory = 0;  ////
+    volatile __shared__ int HT_FULL_FLAG; HT_FULL_FLAG = 0;  ////
 #ifdef COLLISION_PRINT
     __shared__ int num_collision; num_collision = 0;
 #endif
@@ -63,15 +63,15 @@ __global__ void krnl_lineitem1(
         int att4_llinenum;
 
         int tid_lineitem1 = 0;
-        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);
+        unsigned loopVar__ = ((blockIdx.x * blockDim.x) + threadIdx.x);
         unsigned step = (blockDim.x * gridDim.x);
-        unsigned flushPipeline = 0;
+        unsigned flushPipeline__ = 0;
         int active = 0;
-        while(!(flushPipeline)) {
-            tid_lineitem1 = loopVar;
-            active = (loopVar < 6001215);
+        while(!(flushPipeline__)) {
+            tid_lineitem1 = loopVar__;
+            active = (loopVar__ < 6001215);
             // flush pipeline if no new elements
-            flushPipeline = !(__ballot_sync(ALL_LANES,active));
+            flushPipeline__ = !(__ballot_sync(ALL_LANES,active));
             if(active) {
                 att4_llinenum = iatt4_llinenum[tid_lineitem1];
             }
@@ -96,8 +96,8 @@ __global__ void krnl_lineitem1(
                     }
                     else {
                         assert(bucketFound == 0);  ////
-//                        loopVar -= step; TODO use this in other branch: copy ht first, then ...
-                        atomicAdd((int *)&migration_to_global_memory, 1);  ////
+                        loopVar__ -= step;
+                        atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
                         bucket = -1;
                         break;  ////
                     }
@@ -110,38 +110,85 @@ __global__ void krnl_lineitem1(
             }
 
             /// Implication and Disjunction: P->Q <=>  ^P OR Q
-            /// bucket==-1 -> migration_to_global_memory!=0
-            assert(bucket != -1 || migration_to_global_memory != 0);
+            /// bucket==-1 -> HT_FULL_FLAG!=0
+            assert(bucket != -1 || HT_FULL_FLAG != 0);
 
             //// insert the tuple into the global memory hash table.
-//            if (bucket == -1 || migration_to_global_memory != 0) {  ////
-            if (bucket == -1) {  ////
-//            if (migration_to_global_memory != 0) {  ////
-                /// <-- START: second half of the kernel 1
-                if(active) {
-                    uint64_t hash2 = 0;
-                    hash2 = 0;
-                    if(active) {
-                        hash2 = hash ( (hash2 + ((uint64_t)att4_llinenum)));
-                    }
-                    apayl2 payl;
-                    payl.att4_llinenum = att4_llinenum;
-                    int bucketFound = 0;
-                    int numLookups = 0;
-                    while(!(bucketFound)) {
-                        bucket = hashAggregateGetBucket ( g_aht2, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
-                        apayl2 probepayl = g_aht2[bucket].payload;  ////
-                        bucketFound = 1;
-                        bucketFound &= ((payl.att4_llinenum == probepayl.att4_llinenum));
+            __syncthreads();  ////
+            if (HT_FULL_FLAG != 0) {
+                /// Copy the shared memory hash table (pre-aggreagation) into the global hash table.
+                {
+                    /// <-- START: first half of the kernel 2
+                    int att4_llinenum;
+                    int tid_aggregation2 = 0;
+                    unsigned loopVar = threadIdx.x;  ///
+                    unsigned step = blockDim.x;  ///
+                    unsigned flushPipeline = 0;
+                    int active = 0;
+                    while(!(flushPipeline)) {
+                        tid_aggregation2 = loopVar;
+                        active = (loopVar < HT_SIZE);  ///
+                        // flush pipeline if no new elements
+                        flushPipeline = !(__ballot_sync(ALL_LANES,active));
+                        if(active) {
+                        }
+                        // -------- scan aggregation ht (opId: 2) --------
+                        if(active) {
+                            active &= ((aht2[tid_aggregation2].lock.lock == OnceLock::LOCK_DONE));
+                        }
+                        if(active) {
+                            apayl2 payl = aht2[tid_aggregation2].payload;
+                            att4_llinenum = payl.att4_llinenum;
+                        }
+                        if(active) {
+                        }
+                        /// <-- END: first half of the kernel 2
+
+
+                        /// <-- START: second half of the kernel 1
+                        /// Insert to global hash table.
+                        int bucket = 0;
+                        if(active) {
+                            uint64_t hash2 = 0;
+                            hash2 = 0;
+                            if(active) {
+                                hash2 = hash ( (hash2 + ((uint64_t)att4_llinenum)));
+                            }
+                            apayl2 payl;
+                            payl.att4_llinenum = att4_llinenum;
+                            int bucketFound = 0;
+                            int numLookups = 0;
+                            while(!(bucketFound)) {
+                                bucket = hashAggregateGetBucket ( g_aht2, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
+                                apayl2 probepayl = g_aht2[bucket].payload;  ////
+                                bucketFound = 1;
+                                bucketFound &= ((payl.att4_llinenum == probepayl.att4_llinenum));
+                            }
+                        }
+                        if(active) {
+                        }
+                        /// <-- END: second half of the kernel 1
+                        loopVar += step;
                     }
                 }
-                if(active) {
-                    ////
+
+                {
+                    /// Init hash table in shared memory.
+                    int ht_index;
+                    unsigned loopVar = threadIdx.x;  ///
+                    unsigned step = blockDim.x;  ///
+                    while(loopVar < HT_SIZE) {
+                        ht_index = loopVar;
+                        aht2[ht_index].lock.init();
+                        aht2[ht_index].hash = HASH_EMPTY;
+                        loopVar += step;
+                    }
                 }
-                /// <-- END: second half of the kernel 1
+                atomicExch((int*)&HT_FULL_FLAG, 0);
             }
+            __syncthreads();  ////
             ////
-            loopVar += step;
+            loopVar__ += step;
         }
     }
 
@@ -155,7 +202,7 @@ __global__ void krnl_lineitem1(
 
 #ifdef HT_CHECKER
     if (threadIdx.x == 0) {
-        if (migration_to_global_memory != 0) {
+        if (HT_FULL_FLAG != 0) {
             printf("FUll.\n");
         } else {
             printf("Not FULL.\n");
