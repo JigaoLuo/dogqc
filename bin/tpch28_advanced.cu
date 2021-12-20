@@ -28,6 +28,66 @@ constexpr int SHARED_MEMORY_HT_SIZE = 1024;  /// In shared memory
 constexpr int GLOBAL_HT_SIZE = 12002430;  /// In global memory
 //constexpr int GLOBAL_HT_SIZE = 65536;  /// In global memory
 
+__device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, int* agg1, int SHARED_MEMORY_HT_SIZE, agg_ht<apayl2>* g_aht2, int* g_agg1) {
+    /// Copy the shared memory hash table (pre-aggreagation) into the global hash table.
+    {
+        /// <-- START: first half of the kernel 2
+        int att4_lsuppkey;
+        int att1_countlsu;
+        int tid_aggregation2 = 0;
+        unsigned loopVar = threadIdx.x;  ///
+        unsigned step = blockDim.x;  ///
+        unsigned flushPipeline = 0;
+        int active = 0;
+        while(!(flushPipeline)) {
+            tid_aggregation2 = loopVar;
+            active = (loopVar < SHARED_MEMORY_HT_SIZE);  ///
+            // flush pipeline if no new elements
+            flushPipeline = !(__ballot_sync(ALL_LANES,active));
+            if(active) {
+            }
+            // -------- scan aggregation ht (opId: 2) --------
+            if(active) {
+                active &= ((aht2[tid_aggregation2].lock.lock == OnceLock::LOCK_DONE));
+            }
+            if(active) {
+                apayl2 payl = aht2[tid_aggregation2].payload;
+                att4_lsuppkey = payl.att4_lsuppkey;
+            }
+            if(active) {
+                att1_countlsu = agg1[tid_aggregation2];
+            }
+            /// <-- END: first half of the kernel 2
+
+            /// <-- START: second half of the kernel 1
+            /// Insert to global hash table.
+            int bucket = 0;
+            if(active) {
+                uint64_t hash2 = 0;
+                hash2 = 0;
+                if(active) {
+                    hash2 = hash ( (hash2 + ((uint64_t)att4_lsuppkey)));
+                }
+                apayl2 payl;
+                payl.att4_lsuppkey = att4_lsuppkey;
+                int bucketFound = 0;
+                int numLookups = 0;
+                while(!(bucketFound)) {
+                    bucket = hashAggregateGetBucket ( g_aht2, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
+                    apayl2 probepayl = g_aht2[bucket].payload;  ////
+                    bucketFound = 1;
+                    bucketFound &= ((payl.att4_lsuppkey == probepayl.att4_lsuppkey));
+                }
+            }
+            if(active) {
+                atomicAdd(&(g_agg1[bucket]), ((int)att1_countlsu));  ////
+            }
+            /// <-- END: second half of the kernel 1
+            loopVar += step;
+        }
+    }
+}
+
 __global__ void krnl_lineitem1(
     int* iatt4_lsuppkey, int* nout_result, int* oatt4_lsuppkey, int* oatt1_countlsu, agg_ht<apayl2>* g_aht2, int* g_agg1) {  ///
 
@@ -109,64 +169,7 @@ __global__ void krnl_lineitem1(
 
             __syncthreads();  ////
             if (HT_FULL_FLAG != 0) {
-                /// Copy the shared memory hash table (pre-aggreagation) into the global hash table.
-                {
-                    /// <-- START: first half of the kernel 2
-                    int att4_lsuppkey;
-                    int att1_countlsu;
-                    int tid_aggregation2 = 0;
-                    unsigned loopVar = threadIdx.x;  ///
-                    unsigned step = blockDim.x;  ///
-                    unsigned flushPipeline = 0;
-                    int active = 0;
-                    while(!(flushPipeline)) {
-                        tid_aggregation2 = loopVar;
-                        active = (loopVar < SHARED_MEMORY_HT_SIZE);  ///
-                        // flush pipeline if no new elements
-                        flushPipeline = !(__ballot_sync(ALL_LANES,active));
-                        if(active) {
-                        }
-                        // -------- scan aggregation ht (opId: 2) --------
-                        if(active) {
-                            active &= ((aht2[tid_aggregation2].lock.lock == OnceLock::LOCK_DONE));
-                        }
-                        if(active) {
-                            apayl2 payl = aht2[tid_aggregation2].payload;
-                            att4_lsuppkey = payl.att4_lsuppkey;
-                        }
-                        if(active) {
-                            att1_countlsu = agg1[tid_aggregation2];
-                        }
-                        /// <-- END: first half of the kernel 2
-
-                        /// <-- START: second half of the kernel 1
-                        /// Insert to global hash table.
-                        int bucket = 0;
-                        if(active) {
-                            uint64_t hash2 = 0;
-                            hash2 = 0;
-                            if(active) {
-                                hash2 = hash ( (hash2 + ((uint64_t)att4_lsuppkey)));
-                            }
-                            apayl2 payl;
-                            payl.att4_lsuppkey = att4_lsuppkey;
-                            int bucketFound = 0;
-                            int numLookups = 0;
-                            while(!(bucketFound)) {
-                                bucket = hashAggregateGetBucket ( g_aht2, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
-                                apayl2 probepayl = g_aht2[bucket].payload;  ////
-                                bucketFound = 1;
-                                bucketFound &= ((payl.att4_lsuppkey == probepayl.att4_lsuppkey));
-                            }
-                        }
-                        if(active) {
-                            atomicAdd(&(g_agg1[bucket]), ((int)att1_countlsu));  ////
-                        }
-                        /// <-- END: second half of the kernel 1
-                        loopVar += step;
-                    }
-                }
-
+                sm_to_gm(aht2, agg1, SHARED_MEMORY_HT_SIZE, g_aht2, g_agg1);
                 initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
                 initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
                 atomicExch((int*)&HT_FULL_FLAG, 0);
@@ -194,64 +197,7 @@ __global__ void krnl_lineitem1(
         }
     }
 #endif
-
-    /// Copy the shared memory hash table (pre-aggreagation) into the global hash table.
-    {
-        /// <-- START: first half of the kernel 2
-        int att4_lsuppkey;
-        int att1_countlsu;
-        int tid_aggregation2 = 0;
-        unsigned loopVar = threadIdx.x;  ///
-        unsigned step = blockDim.x;  ///
-        unsigned flushPipeline = 0;
-        int active = 0;
-        while(!(flushPipeline)) {
-            tid_aggregation2 = loopVar;
-            active = (loopVar < SHARED_MEMORY_HT_SIZE);  ///
-            // flush pipeline if no new elements
-            flushPipeline = !(__ballot_sync(ALL_LANES,active));
-            if(active) {
-            }
-            // -------- scan aggregation ht (opId: 2) --------
-            if(active) {
-                active &= ((aht2[tid_aggregation2].lock.lock == OnceLock::LOCK_DONE));
-            }
-            if(active) {
-                apayl2 payl = aht2[tid_aggregation2].payload;
-                att4_lsuppkey = payl.att4_lsuppkey;
-            }
-            if(active) {
-                att1_countlsu = agg1[tid_aggregation2];
-            }
-            /// <-- END: first half of the kernel 2
-
-            /// <-- START: second half of the kernel 1
-            /// Insert to global hash table.
-            int bucket = 0;
-            if(active) {
-                uint64_t hash2 = 0;
-                hash2 = 0;
-                if(active) {
-                    hash2 = hash ( (hash2 + ((uint64_t)att4_lsuppkey)));
-                }
-                apayl2 payl;
-                payl.att4_lsuppkey = att4_lsuppkey;
-                int bucketFound = 0;
-                int numLookups = 0;
-                while(!(bucketFound)) {
-                    bucket = hashAggregateGetBucket ( g_aht2, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
-                    apayl2 probepayl = g_aht2[bucket].payload;  ////
-                    bucketFound = 1;
-                    bucketFound &= ((payl.att4_lsuppkey == probepayl.att4_lsuppkey));
-                }
-            }
-            if(active) {
-                atomicAdd(&(g_agg1[bucket]), ((int)att1_countlsu));  ////
-            }
-            /// <-- END: second half of the kernel 1
-            loopVar += step;
-        }
-    }
+    sm_to_gm(aht2, agg1, SHARED_MEMORY_HT_SIZE, g_aht2, g_agg1);
 }
 
 __global__ void krnl_aggregation2(
