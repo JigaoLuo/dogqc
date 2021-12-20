@@ -24,7 +24,7 @@ struct apayl2 {
 };
 
 constexpr int SHARED_MEMORY_SIZE = 49152;  /// Total amount of shared memory per block:       49152 bytes
-const int HT_SIZE = 1024;  /// In shared memory
+constexpr int SHARED_MEMORY_HT_SIZE = 1024;  /// In shared memory TODO: RENAME IT
 constexpr int GLOBAL_HT_SIZE = 12002430;  /// In global memory
 //constexpr int GLOBAL_HT_SIZE = 4194304;  /// In global memory
 
@@ -32,8 +32,8 @@ __global__ void krnl_lineitem1(
     int* iatt2_lorderke, int* nout_result, int* oatt2_lorderke, int* oatt1_countlor, agg_ht<apayl2>* g_aht2, int* g_agg1) {  ///
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
-    __shared__ agg_ht_sm<apayl2> aht2[HT_SIZE];  ///
-    __shared__ int agg1[HT_SIZE];  ///
+    __shared__ agg_ht_sm<apayl2> aht2[SHARED_MEMORY_HT_SIZE];  ///
+    __shared__ int agg1[SHARED_MEMORY_HT_SIZE];  ///
     volatile __shared__ int HT_FULL_FLAG; HT_FULL_FLAG = 0;  ////
 #ifdef COLLISION_PRINT
     __shared__ int num_collision; num_collision = 0;
@@ -45,31 +45,8 @@ __global__ void krnl_lineitem1(
         printf("Shared memory usage: %d / %d bytes.\n", shared_memory_usage, SHARED_MEMORY_SIZE);
     }
 
-    {
-        /// Init hash table in shared memory.
-        int ht_index;
-        unsigned loopVar = threadIdx.x;  ///
-        unsigned step = blockDim.x;  ///
-        while(loopVar < HT_SIZE) {
-            ht_index = loopVar;
-            aht2[ht_index].lock.init();
-            aht2[ht_index].hash = HASH_EMPTY;
-            loopVar += step;
-        }
-    }
-
-    {
-        /// Init array in shared memory.
-        int index;
-        unsigned loopVar = threadIdx.x;  ///
-        unsigned step = blockDim.x;  ///
-        while(loopVar < HT_SIZE) {
-            index = loopVar;
-            agg1[index] = 0;
-            loopVar += step;
-        }
-    }
-
+    initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
+    initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
     __syncthreads();
 
     {
@@ -104,7 +81,7 @@ __global__ void krnl_lineitem1(
                 int bucketFound = 0;
                 int numLookups = 0;
                 while(!(bucketFound)) {   ////
-                    bucket = hashAggregateGetBucket ( aht2, HT_SIZE, hash2, numLookups, &(payl));  ///
+                    bucket = hashAggregateGetBucket ( aht2,SHARED_MEMORY_HT_SIZE, hash2, numLookups, &(payl));  ///
                     if (bucket != -1) {  ////
                         apayl2 probepayl = aht2[bucket].payload;
                         bucketFound = 1;
@@ -145,7 +122,7 @@ __global__ void krnl_lineitem1(
                     int active = 0;
                     while(!(flushPipeline)) {
                         tid_aggregation2 = loopVar;
-                        active = (loopVar < HT_SIZE);  ///
+                        active = (loopVar <SHARED_MEMORY_HT_SIZE);  ///
                         // flush pipeline if no new elements
                         flushPipeline = !(__ballot_sync(ALL_LANES,active));
                         if(active) {
@@ -192,30 +169,8 @@ __global__ void krnl_lineitem1(
                     }
                 }
 
-                {
-                    /// Init hash table in shared memory.
-                    int ht_index;
-                    unsigned loopVar = threadIdx.x;  ///
-                    unsigned step = blockDim.x;  ///
-                    while(loopVar < HT_SIZE) {
-                        ht_index = loopVar;
-                        aht2[ht_index].lock.init();
-                        aht2[ht_index].hash = HASH_EMPTY;
-                        loopVar += step;
-                    }
-                }
-
-                {
-                    /// Init array in shared memory.
-                    int index;
-                    unsigned loopVar = threadIdx.x;  ///
-                    unsigned step = blockDim.x;  ///
-                    while(loopVar < HT_SIZE) {
-                        index = loopVar;
-                        agg1[index] = 0;
-                        loopVar += step;
-                    }
-                }
+                initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
+                initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
                 atomicExch((int*)&HT_FULL_FLAG, 0);
             }
             __syncthreads();  ////
@@ -255,7 +210,7 @@ __global__ void krnl_lineitem1(
         int active = 0;
         while(!(flushPipeline)) {
             tid_aggregation2 = loopVar;
-            active = (loopVar < HT_SIZE);  ///
+            active = (loopVar <SHARED_MEMORY_HT_SIZE);  ///
             // flush pipeline if no new elements
             flushPipeline = !(__ballot_sync(ALL_LANES,active));
             if(active) {

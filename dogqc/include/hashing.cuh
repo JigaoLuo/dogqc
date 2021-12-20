@@ -362,6 +362,34 @@ __global__ void initAggHT ( agg_ht_sm<T>* ht, int32_t num ) {
     }
 }
 
+template <typename T>
+__device__ void initSMAggHT ( agg_ht_sm<T>* ht, int SHARED_MEMORY_HT_SIZE ) {
+    /// Init hash table in shared memory.
+    int ht_index;
+    unsigned loopVar = threadIdx.x;
+    ///
+    unsigned step = blockDim.x;  ///
+    while(loopVar < SHARED_MEMORY_HT_SIZE) {
+        ht_index = loopVar;
+        ht[ht_index].lock.init();
+        ht[ht_index].hash = HASH_EMPTY;
+        loopVar += step;
+    }
+}
+
+template <typename T>
+__device__ void initSMAggArray ( T* ht, int SHARED_MEMORY_HT_SIZE ) {
+    /// Init array in shared memory.
+    int index;
+    unsigned loopVar = threadIdx.x;  ///
+    unsigned step = blockDim.x;  ///
+    while(loopVar < SHARED_MEMORY_HT_SIZE) {
+        index = loopVar;
+        ht[index] = 0;
+        loopVar += step;
+    }
+}
+
 
 // returns candidate bucket
 template <typename T>
@@ -371,6 +399,7 @@ __device__ int hashAggregateGetBucket ( agg_ht_sm<T>* ht, int32_t ht_size, uint6
     bool done=false;
     while ( !done ) {
         if ( numLookups >= N_PROBE_LIMIT ) {
+
 //            printf ( "shared memory hash table reached probing limit %d: threadId %d, blockID %d \n", N_PROBE_LIMIT, threadIdx.x, blockIdx.x);
             return -1;  /// flag for hash table being full
         }
