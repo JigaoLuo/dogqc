@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-tpch_tbl_files=/home/jigao/Desktop/tpch-dbgen
+tpch_tbl_files=/home/jigao/Desktop/tpch-dbgen-sf1
+#tpch_tbl_files=/home/jigao/Desktop/tpch-dbgen-sf10
 
 function run_single_query {
   # echo $tpch_tbl_files

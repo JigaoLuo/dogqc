@@ -1,6 +1,7 @@
 import subprocess
 import pickle
 import os
+import hashlib
 
 import dogqc.identifier as ident
 from dogqc.attributes import Attribute 
@@ -10,7 +11,8 @@ from dogqc.types import Type
 from dogqc.codegen import CType
 
 
-def dbAccess ( schema, dbpath, csvpath, doReload=False, waitEnter=False ):
+def dbAccess ( schema, targetpath, csvpath, doReload=False, waitEnter=False ):
+    dbpath = targetpath + "/" + str(os.path.split(csvpath)[1])
     if not os.path.exists ( dbpath ):
         os.makedirs ( dbpath )
     sizedSchema = Importer.retrieveTableSizes ( schema, csvpath )
