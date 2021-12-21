@@ -25,7 +25,9 @@ struct apayl2 {
 
 constexpr int SHARED_MEMORY_SIZE = 49152;  /// Total amount of shared memory per block:       49152 bytes
 constexpr int SHARED_MEMORY_HT_SIZE = 1024;  /// In shared memory TODO: RENAME IT
-constexpr int GLOBAL_HT_SIZE = 12002430;  /// In global memory
+//constexpr int LINEITEM_SIZE = 6001215;       /// SF1
+constexpr int LINEITEM_SIZE = 59986052;      /// SF10, change the folder name to sf10
+constexpr int GLOBAL_HT_SIZE = LINEITEM_SIZE * 2;  /// In global memory
 //constexpr int GLOBAL_HT_SIZE = 4194304;  /// In global memory
 
 __device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, int* agg1, int SHARED_MEMORY_HT_SIZE, agg_ht<apayl2>* g_aht2, int* g_agg1) {
@@ -124,7 +126,7 @@ __global__ void krnl_lineitem1(
         int active = 0;
         while(!(flushPipeline__)) {
             tid_lineitem1 = loopVar__;
-            active = (loopVar__ < 6001215);
+            active = (loopVar__ < LINEITEM_SIZE);
             // flush pipeline if no new elements
             flushPipeline__ = !(__ballot_sync(ALL_LANES,active));
             if(active) {
@@ -256,11 +258,11 @@ __global__ void krnl_aggregation2(
 
 int main() {
     int* iatt2_lorderke;
-    iatt2_lorderke = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_orderkey" );
+    iatt2_lorderke = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf10/lineitem_l_orderkey" );
 
     int nout_result;
-    std::vector < int > oatt2_lorderke(6001215);
-    std::vector < int > oatt1_countlor(6001215);
+    std::vector < int > oatt2_lorderke(LINEITEM_SIZE);
+    std::vector < int > oatt1_countlor(LINEITEM_SIZE);
 
     // wake up gpu
     cudaDeviceSynchronize();
@@ -273,13 +275,13 @@ int main() {
     }
 
     int* d_iatt2_lorderke;
-    cudaMalloc((void**) &d_iatt2_lorderke, 6001215* sizeof(int) );
+    cudaMalloc((void**) &d_iatt2_lorderke, LINEITEM_SIZE* sizeof(int) );
     int* d_nout_result;
     cudaMalloc((void**) &d_nout_result, 1* sizeof(int) );
     int* d_oatt2_lorderke;
-    cudaMalloc((void**) &d_oatt2_lorderke, 6001215* sizeof(int) );
+    cudaMalloc((void**) &d_oatt2_lorderke, LINEITEM_SIZE* sizeof(int) );
     int* d_oatt1_countlor;
-    cudaMalloc((void**) &d_oatt1_countlor, 6001215* sizeof(int) );
+    cudaMalloc((void**) &d_oatt1_countlor, LINEITEM_SIZE* sizeof(int) );
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -351,7 +353,7 @@ int main() {
         fflush(stdout);
     }
 
-    cudaMemcpy( d_iatt2_lorderke, iatt2_lorderke, 6001215 * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy( d_iatt2_lorderke, iatt2_lorderke, LINEITEM_SIZE * sizeof(int), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -396,8 +398,8 @@ int main() {
     }
 
     cudaMemcpy( &nout_result, d_nout_result, 1 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt2_lorderke.data(), d_oatt2_lorderke, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt1_countlor.data(), d_oatt1_countlor, 6001215 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt2_lorderke.data(), d_oatt2_lorderke, LINEITEM_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt1_countlor.data(), d_oatt1_countlor, LINEITEM_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -424,7 +426,7 @@ int main() {
 
     std::clock_t start_finish3 = std::clock();
     printf("\nResult: %i tuples\n", nout_result);
-    if((nout_result > 6001215)) {
+    if((nout_result > LINEITEM_SIZE)) {
         ERROR("Index out of range. Output size larger than allocated with expected result number.")
     }
     for ( int pv = 0; ((pv < 10) && (pv < nout_result)); pv += 1) {
