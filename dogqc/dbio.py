@@ -14,7 +14,8 @@ from dogqc.codegen import CType
 def dbAccess ( schema, targetpath, csvpath, doReload=False, waitEnter=False ):
     # hashObject = hashlib.sha1(str(csvpath).encode('utf-8'))
     # hexDig = hashObject.hexdigest()
-    dbpath = targetpath + "/" + str(os.path.split(csvpath))
+    print(os.path.split(csvpath)[1])
+    dbpath = targetpath + "/" + str(os.path.split(csvpath)[1])
     if not os.path.exists ( dbpath ):
         os.makedirs ( dbpath )
     sizedSchema = Importer.retrieveTableSizes ( schema, csvpath )
