@@ -253,7 +253,7 @@ __global__ void krnl_aggregation2(
 
 int main() {
     int* iatt4_lsuppkey;
-    iatt4_lsuppkey = ( int*) map_memory_file ( "mmdb/lineitem_l_suppkey" );
+    iatt4_lsuppkey = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_suppkey" );
 
     int nout_result;
     std::vector < int > oatt4_lsuppkey(6001215);

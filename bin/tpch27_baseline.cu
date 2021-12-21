@@ -117,7 +117,7 @@ __global__ void krnl_aggregation2(
 
 int main() {
     int* iatt2_lorderke;
-    iatt2_lorderke = ( int*) map_memory_file ( "mmdb/lineitem_l_orderkey" );
+    iatt2_lorderke = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_orderkey" );
 
     int nout_result;
     std::vector < int > oatt2_lorderke(6001215);

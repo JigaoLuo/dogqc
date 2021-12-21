@@ -241,7 +241,7 @@ __global__ void krnl_reduce(
 
 int main() {
     int* iatt4_llinenum;
-    iatt4_llinenum = ( int*) map_memory_file ( "mmdb/lineitem_l_linenumber" );
+    iatt4_llinenum = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_linenumber" );
 
     int nout_result;
     std::vector < int > oatt4_llinenum(6001215);
