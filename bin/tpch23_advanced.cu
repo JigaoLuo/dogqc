@@ -149,7 +149,6 @@ __global__ void krnl_lineitem1(
                         assert(bucketFound == 0);  ////
                         loopVar__ -= step;
                         atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
-                        bucket = -1;
                         break;  ////
                     }
                 }
@@ -169,11 +168,12 @@ __global__ void krnl_lineitem1(
             __syncthreads();  ////
             if (HT_FULL_FLAG != 0) {
                 sm_to_gm(aht2, agg1, SHARED_MEMORY_HT_SIZE, g_aht2, g_agg1);
+                __threadfence_block(); /// Ensure the ordering:
                 initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
                 initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
                 atomicExch((int*)&HT_FULL_FLAG, 0);
+                __syncthreads();  ////
             }
-            __syncthreads();  ////
             ////
             loopVar__ += step;
         }
