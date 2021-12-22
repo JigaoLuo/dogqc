@@ -24,9 +24,9 @@ struct apayl2 {
 };
 
 constexpr int SHARED_MEMORY_SIZE = 49152;  /// Total amount of shared memory per block:       49152 bytes
-constexpr int SHARED_MEMORY_HT_SIZE = 1024;  /// In shared memory TODO: RENAME IT
-//constexpr int LINEITEM_SIZE = 6001215;       /// SF1
-constexpr int LINEITEM_SIZE = 59986052;      /// SF10, change the folder name to sf10
+constexpr int SHARED_MEMORY_HT_SIZE = 1024;  /// In shared memory
+constexpr int LINEITEM_SIZE = 6001215;       /// SF1
+//constexpr int LINEITEM_SIZE = 59986052;      /// SF10, change the folder name to sf10
 constexpr int GLOBAL_HT_SIZE = LINEITEM_SIZE * 2;  /// In global memory
 //constexpr int GLOBAL_HT_SIZE = 4194304;  /// In global memory
 
@@ -154,7 +154,6 @@ __global__ void krnl_lineitem1(
                         assert(bucketFound == 0);  ////
                         loopVar__ -= step;
                         atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
-                        bucket = -1;
                         break;  ////
                     }
                 }
@@ -174,11 +173,12 @@ __global__ void krnl_lineitem1(
             __syncthreads();  ////
             if (HT_FULL_FLAG != 0) {
                 sm_to_gm(aht2, agg1, SHARED_MEMORY_HT_SIZE, g_aht2, g_agg1);
+                __threadfence_block(); /// Ensure the ordering:
                 initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
                 initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
                 atomicExch((int*)&HT_FULL_FLAG, 0);
+                __syncthreads();  ////
             }
-            __syncthreads();  ////
             ////
             loopVar__ += step;
         }
@@ -258,7 +258,7 @@ __global__ void krnl_aggregation2(
 
 int main() {
     int* iatt2_lorderke;
-    iatt2_lorderke = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf10/lineitem_l_orderkey" );
+    iatt2_lorderke = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_orderkey" );
 
     int nout_result;
     std::vector < int > oatt2_lorderke(LINEITEM_SIZE);
