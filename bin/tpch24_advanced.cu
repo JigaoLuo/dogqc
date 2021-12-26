@@ -142,23 +142,17 @@ __global__ void krnl_lineitem1(
                         bucketFound = 1;
                         bucketFound &= ((payl.att4_llinenum == probepayl.att4_llinenum));
                     }
-                    else {
-                        assert(bucketFound == 0);  ////
-                        loopVar__ -= step;
-                        atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
-                        break;  ////
-                    }
+                }
+
+                if (numLookups >= N_PROBE_LIMIT) {
+                    atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
                 }
 #ifdef COLLISION_PRINT
                 atomicAdd(&num_collision, numLookups - 1);
 #endif
             }
-            if(active && bucket != -1) {  ////
+            if(active) {  ////
             }
-
-            /// Implication and Disjunction: P->Q <=>  ^P OR Q
-            /// bucket==-1 -> HT_FULL_FLAG!=0
-            assert(bucket != -1 || HT_FULL_FLAG != 0);
 
             //// insert the tuple into the global memory hash table.
             __syncthreads();  ////

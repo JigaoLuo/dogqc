@@ -145,28 +145,20 @@ __global__ void krnl_lineitem1(
                 int numLookups = 0;
                 while(!(bucketFound)) {   ////
                     bucket = hashAggregateGetBucket ( aht2, SHARED_MEMORY_HT_SIZE, hash2, numLookups, &(payl));  ///
-                    if (bucket != -1) {  ////
-                        apayl2 probepayl = aht2[bucket].payload;
-                        bucketFound = 1;
-                        bucketFound &= ((payl.att4_lsuppkey == probepayl.att4_lsuppkey));
-                    } else {  ////
-                        assert(bucketFound == 0);  ////
-                        loopVar__ -= step;
-                        atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
-                        break;  ////
-                    }  ////
+                    apayl2 probepayl = aht2[bucket].payload;
+                    bucketFound = 1;
+                    bucketFound &= ((payl.att4_lsuppkey == probepayl.att4_lsuppkey));
+                }
+                if (numLookups >= N_PROBE_LIMIT) {
+                    atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
                 }
 #ifdef COLLISION_PRINT
                 atomicAdd(&num_collision, numLookups - 1);
 #endif
             }
-            if(active && bucket != -1) {  ////
+            if(active) {  ////
                 atomicAdd(&(agg1[bucket]), ((int)1));
             }
-
-            /// Implication and Disjunction: P->Q <=>  ^P OR Q
-            /// bucket==-1 -> HT_FULL_FLAG!=0
-            assert(bucket != -1 || HT_FULL_FLAG!=0);
 
             __syncthreads();  ////
             if (HT_FULL_FLAG != 0) {

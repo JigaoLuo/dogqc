@@ -390,20 +390,15 @@ __device__ void initSMAggArray ( T* ht, int SHARED_MEMORY_HT_SIZE ) {
     }
 }
 
+constexpr static int N_PROBE_LIMIT = 50;
 
 // returns candidate bucket
+// This hash table can't be full, which is handled by the function caller side.
 template <typename T>
 __device__ int hashAggregateGetBucket ( agg_ht_sm<T>* ht, int32_t ht_size, uint64_t grouphash, int& numLookups, T* payl ) {
-    constexpr static int N_PROBE_LIMIT = 50;
     int location=-1;
     bool done=false;
     while ( !done ) {
-        if ( numLookups >= N_PROBE_LIMIT ) {
-
-//            printf ( "shared memory hash table reached probing limit %d: threadId %d, blockID %d \n", N_PROBE_LIMIT, threadIdx.x, blockIdx.x);
-            return -1;  /// flag for hash table being full
-        }
-
         location = ( grouphash + numLookups ) % ht_size;
         agg_ht_sm<T>& entry = ht [ location ];
         numLookups++;
