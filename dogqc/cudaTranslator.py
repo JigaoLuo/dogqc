@@ -156,8 +156,9 @@ class PipelineAttributesFile ( object ):
                 self.codegen.gpumem.mapForRead ( a )
                 self.baseColumns [ baseColFileSys ] = a.getGPU() 
             # gpu input column that was already used
+            # with [[maybe_unused]] in declaration to be free from compiler warnings
             else:
-                a.declarePointer ( self.codegen.read )
+                a.declarePointer ( self.codegen.read, True )
                 emit ( assign ( a, mmapFile ( a.dataType, baseColFileSys ) ), self.codegen.read )
                 self.codegen.gpumem.declare ( a )
                 emit ( assign ( a.getGPU(), self.baseColumns [ baseColFileSys ] ), self.codegen.gpumem.cudaMalloc )

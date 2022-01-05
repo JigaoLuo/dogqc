@@ -67,8 +67,11 @@ class Variable ( object ):
     def declareAssign ( self, expr, code ) :
         code.add ( self.dataType + " " + self.name + " = " + str(expr) + ";" )
     
-    def declarePointer ( self, code ):
-        code.add ( self.dataType + "* " + self.name + ";" )
+    def declarePointer ( self, code, maybe_unused = False ):
+        if not maybe_unused:
+            code.add ( self.dataType + "* " + self.name + ";" )
+        else:
+            code.add ( "[[maybe_unused]] " + self.dataType + "* " + self.name + ";" )
     
     def declareVector ( self, code ):
         code.add( "std::vector < " + self.dataType + " > " + self.name + "(" + str(self.numElements) + ");" ) 
