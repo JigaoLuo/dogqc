@@ -22,7 +22,10 @@ struct apayl2 {
     int att5_llinenum;
 };
 
-constexpr int SHARED_MEMORY_SIZE = 49152;  /// Total amount of shared memory per block:       49152 bytes
+__device__ bool operator==(const apayl2& lhs, const apayl2& rhs) {
+    return lhs.att5_llinenum == rhs.att5_llinenum;
+}
+
 constexpr int SHARED_MEMORY_HT_SIZE = 1024;  /// In shared memory
 constexpr int LINEITEM_SIZE = 6001215;       /// SF1
 //constexpr int LINEITEM_SIZE = 59986052;      /// SF10, change the folder name to sf10
@@ -93,18 +96,13 @@ __global__ void krnl_lineitem1(
     int* iatt5_llinenum, int* nout_result, int* oatt5_llinenum, int* oatt1_countlli, agg_ht<apayl2>* g_aht2, int* g_agg1) {  ///
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
-    __shared__ agg_ht_sm<apayl2> aht2[SHARED_MEMORY_HT_SIZE];  ///
-    __shared__ int agg1[SHARED_MEMORY_HT_SIZE];  ///
+    extern __shared__ char shared_memory[];
+    agg_ht_sm<apayl2>* aht2 = (agg_ht_sm<apayl2> *)shared_memory;  ///
+    int* agg1 = (int*)(shared_memory + sizeof(agg_ht_sm<apayl2>) * SHARED_MEMORY_HT_SIZE);  ///
     volatile __shared__ int HT_FULL_FLAG; HT_FULL_FLAG = 0;  ////
 #ifdef COLLISION_PRINT
     __shared__ int num_collision; num_collision = 0;
 #endif
-    const int shared_memory_usage = sizeof(aht2) + sizeof(agg1);
-    assert(shared_memory_usage <= SHARED_MEMORY_SIZE);  /// Check stuff fits into shared memory in a SM.
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-        /// Allow only one print here.
-        printf("Shared memory usage: %d / %d bytes.\n", shared_memory_usage, SHARED_MEMORY_SIZE);
-    }
 
     initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
     initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
@@ -171,7 +169,7 @@ __global__ void krnl_lineitem1(
                 __threadfence_block(); /// Ensure the ordering:
                 initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
                 initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
-                atomicExch((int*)&HT_FULL_FLAG, 0);
+                if (threadIdx.x == 0) HT_FULL_FLAG = 0;
                 __syncthreads();  ////
             }
             ////
@@ -365,7 +363,10 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_lineitem1<<<gridsize, blocksize>>>(d_iatt5_llinenum, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli, d_aht2, d_agg1);
+        const int shared_memory_usage = (sizeof(agg_ht_sm<apayl2>) + sizeof(int)) * SHARED_MEMORY_HT_SIZE;
+        std::cout << "Shared memory usage: " << shared_memory_usage << " bytes" << std::endl;
+        cudaFuncSetAttribute(krnl_lineitem1, cudaFuncAttributeMaxDynamicSharedMemorySize, /*65536*/ shared_memory_usage);
+        krnl_lineitem1<<<gridsize, blocksize, shared_memory_usage>>>(d_iatt5_llinenum, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli, d_aht2, d_agg1);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_lineitem11 = std::clock();
