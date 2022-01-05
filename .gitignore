@@ -2,4 +2,4 @@
 bin/mmdb/*
 dogqc/__pycache__/
 query/schema/__pycache__/
-
+.ipynb_checkpoints/

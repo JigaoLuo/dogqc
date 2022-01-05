@@ -169,7 +169,7 @@ __global__ void krnl_lineitem1(
                 __threadfence_block(); /// Ensure the ordering:
                 initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
                 initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
-                atomicExch((int*)&HT_FULL_FLAG, 0);
+                if (threadIdx.x == 0) HT_FULL_FLAG = 0;
                 __syncthreads();  ////
             }
             ////
