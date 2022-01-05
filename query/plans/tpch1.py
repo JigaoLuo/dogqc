@@ -1,5 +1,5 @@
 alg.projection ( 
-        [ "l_returnflag", "l_linestatus", "sum_qty", "sum_base_price", "sum_disc_price", "avg_qty", "avg_price", "avg_disc", "count_order" ],
+        [ "l_returnflag", "l_linestatus", "sum_qty", "sum_base_price", "sum_disc_price", "sum_charge", "avg_qty", "avg_price", "avg_disc", "count_order" ],
     alg.aggregation ( 
         [ "l_returnflag", "l_linestatus" ], 
         [ ( Reduction.SUM, "l_quantity", "sum_qty" ),
