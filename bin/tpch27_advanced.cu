@@ -190,16 +190,6 @@ __global__ void krnl_lineitem1(
     }
 #endif
 
-#ifdef HT_CHECKER
-    if (threadIdx.x == 0) {
-        if (HT_FULL_FLAG != 0) {
-            printf("FUll.\n");
-        } else {
-            printf("Not FULL.\n");
-        }
-    }
-#endif
-
     sm_to_gm(aht2, agg1, SHARED_MEMORY_HT_SIZE, g_aht2, g_agg1);
 }
 

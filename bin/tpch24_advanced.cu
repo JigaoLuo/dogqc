@@ -179,16 +179,6 @@ __global__ void krnl_lineitem1(
         printf("In Block %d: num_collision: %d\n", blockIdx.x, num_collision);
     }
 #endif
-
-#ifdef HT_CHECKER
-    if (threadIdx.x == 0) {
-        if (HT_FULL_FLAG != 0) {
-            printf("FUll.\n");
-        } else {
-            printf("Not FULL.\n");
-        }
-    }
-#endif
     sm_to_gm(aht2, SHARED_MEMORY_HT_SIZE, g_aht2);
 }
 
