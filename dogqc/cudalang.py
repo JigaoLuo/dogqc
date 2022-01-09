@@ -106,6 +106,29 @@ class StructClause ( object ):
     def close ( self ):
         self.code.add ( "};" )
 
+
+class StructComparatorClause(object):
+
+    def __init__(self, name, code):
+        self.code = code
+        self.counter = 0
+        code.add("__device__ bool operator==(const " + name + "& lhs, const " + name + "& rhs) {\nreturn ", newline = False)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def add(self, identifier):
+        if (self.counter != 0):
+            self.code.add(" && ", newline = False)
+        self.code.add("lhs." + identifier + " == rhs." + identifier, newline = False)
+        self.counter += 1
+
+    def close(self):
+        self.code.add(";\n}\n")
+
 class WhileLoop ( object ):
 
     def __init__( self, condition, code ): 

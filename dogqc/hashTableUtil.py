@@ -46,8 +46,12 @@ class Payload ( object ):
             for id, a in attributes.items():
                 identifier = ident.att ( a )
                 self.vars[id] = ctxt.attFile.variable ( a, identifier )
-                self.vars[id].declare ( ctxt.codegen.types ) 
-    
+                self.vars[id].declare ( ctxt.codegen.types )
+        with StructComparatorClause ( self.typeName, ctxt.codegen.types ) as struct_comparator_clause:
+            for id, a in attributes.items():
+                identifier = ident.att ( a )
+                struct_comparator_clause.add( identifier )
+
     def materialize ( self, varName, code, ctxt ):
         matvar = Variable.val ( self.typeName, varName, code )
         for id, a in self.attributes.items():
