@@ -185,12 +185,11 @@ class CodeGenerator ( object ):
         print(cmd)
         start = time.time()
         if debug:
-            subprocess.run(cmd, shell=True)
+            subprocess.run(cmd, shell=True, check=True)
         else:
-            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True, check=True)
         end = time.time()
         print ( "compilation time: %.1f ms" % ((end-start)*1000) )
-        
 
     def compileCpu ( self, filename, debug=False ):
         self.filename = filename
