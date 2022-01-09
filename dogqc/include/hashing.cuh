@@ -272,9 +272,8 @@ __device__ int hashAggregateGetBucket ( agg_ht<T>* ht, int32_t ht_size, uint64_t
     return location;
 }
 
-// TODO: fix it with no attribute hash
-//// return value indicates if more candidate buckets exist
-//// location used as return value for payload location
+// return value indicates if more candidate buckets exist
+// location used as return value for payload location
 //template <typename T>
 //__device__ bool hashAggregateFindBucket ( agg_ht<T>* ht, int32_t ht_size, uint64_t grouphash, int& numLookups, int& location ) {
 //    location=-1;
@@ -289,6 +288,22 @@ __device__ int hashAggregateGetBucket ( agg_ht<T>* ht, int32_t ht_size, uint64_t
 //    }
 //    return true;
 //}
+
+/// Without hash
+template <typename T>
+__device__ bool hashAggregateFindBucket ( agg_ht<T>* ht, int32_t ht_size, uint64_t grouphash, int& numLookups, int& location, T* payl ) {
+    location=-1;
+    bool done=false;
+    while ( !done ) {
+        location = ( grouphash + numLookups++ ) % ht_size;
+        if ( ht [ location ].payload == T() ) {
+            return false;
+        }
+        done = ( ht [ location ].payload == *payl);
+
+    }
+    return true;
+}
 
 //// return the number of non-empty hash table slots.
 //template <typename T>

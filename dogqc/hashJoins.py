@@ -185,11 +185,14 @@ class EquiJoinTranslator ( BinaryTranslator ):
         with IfClause ( ctxt.vars.activeVar, ctxt.codegen ):
             hashVar = Variable.val ( CType.UINT64, "hash" + str ( self.algExpr.opId ), ctxt.codegen, intConst(0) )
             Hash.attributes ( self.algExpr.probeKeyAttributes, hashVar, ctxt )
-        
+
+
             numLookups = Variable.val ( CType.INT, "numLookups" + str ( self.algExpr.opId ), ctxt.codegen, intConst(0) )
             location = Variable.val ( CType.INT, "location" + str ( self.algExpr.opId ), ctxt.codegen, intConst(0) )
             filterMatch = Variable.val ( CType.INT, "filterMatch" + str ( self.algExpr.opId ), ctxt.codegen, intConst(0) )
-            probeCall = call ( qlib.Fct.HASH_AGG_CHECK, [ self.htmem.ht, self.htmem.numEntries, hashVar, numLookups, location ] )
+            # probeCall = call ( qlib.Fct.HASH_AGG_CHECK, [ self.htmem.ht, self.htmem.numEntries, hashVar, numLookups, location ] ) # with hash
+            payl = self.payload.materialize ( "payl" + str ( self.algExpr.opId ), ctxt.codegen, ctxt ) # without hash
+            probeCall = call ( qlib.Fct.HASH_AGG_CHECK, [ self.htmem.ht, self.htmem.numEntries, hashVar, numLookups, location, addressof ( payl ) ] ) # without hash
             activeProbe = Variable.val ( CType.INT, "activeProbe" + str ( self.algExpr.opId ), ctxt.codegen, intConst(1) )
              
             with WhileLoop ( andLogic ( notLogic ( filterMatch ), activeProbe ), ctxt.codegen ) as loop:
