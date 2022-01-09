@@ -120,10 +120,13 @@ class StructComparatorClause(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def add(self, identifier):
+    def add(self, identifier, is_str):
         if (self.counter != 0):
             self.code.add(" && ", newline = False)
-        self.code.add("lhs." + identifier + " == rhs." + identifier, newline = False)
+        if not is_str:
+            self.code.add("lhs." + identifier + " == rhs." + identifier, newline = False)
+        else:
+            self.code.add("stringEquals(lhs." + identifier + ", rhs." + identifier + ")", newline = False)
         self.counter += 1
 
     def close(self):

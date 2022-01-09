@@ -50,7 +50,7 @@ class Payload ( object ):
         with StructComparatorClause ( self.typeName, ctxt.codegen.types ) as struct_comparator_clause:
             for id, a in attributes.items():
                 identifier = ident.att ( a )
-                struct_comparator_clause.add( identifier )
+                struct_comparator_clause.add( identifier, a.dataType == Type.STRING )
 
     def materialize ( self, varName, code, ctxt ):
         matvar = Variable.val ( self.typeName, varName, code )
