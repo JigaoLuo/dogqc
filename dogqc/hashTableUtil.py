@@ -45,7 +45,7 @@ class Payload ( object ):
 
         # hash table's size
         shared_memory_ht_size = 1024 # TODO(jigao): calculate this.
-        Variable.val ("constexpr " + CType.INT, "SHARED_MEMORY_HT_SIZE", ctxt.codegen.global_constant, shared_memory_ht_size)
+        Variable.val ("constexpr " + CType.INT, "SHARED_MEMORY_HT_SIZE", ctxt.codegen.globalConstant, shared_memory_ht_size)
 
         # hash table's element struct
         with StructClause ( self.typeName, ctxt.codegen.types ):
