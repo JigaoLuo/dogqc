@@ -21,6 +21,7 @@ class CodeGenerator ( object ):
     def __init__( self, decimalRepresentation ):
         self.read = Code()
         self.types = Code()
+        self.global_constant = Code()
         self.kernels = []
         self.currentKernel = None
         self.kernelCalls = []
@@ -124,6 +125,7 @@ class CodeGenerator ( object ):
         if useCuda:
             code.add ( qlib.getCudaIncludes () )
         code.addFragment ( self.types )
+        code.addFragment ( self.global_constant )
         for k in self.kernels: 
             code.add(k.getKernelCode())
         code.add( "int main() {" )

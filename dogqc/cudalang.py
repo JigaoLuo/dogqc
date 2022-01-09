@@ -95,7 +95,7 @@ class StructClause ( object ):
 
     def __init__( self, name, code ): 
         self.code = code
-        code.add ("struct " + name + " {")
+        code.add ("\nstruct " + name + " {")
 
     def __enter__ ( self ): 
         return self
@@ -130,7 +130,7 @@ class StructComparatorClause(object):
         self.counter += 1
 
     def close(self):
-        self.code.add(";\n}\n")
+        self.code.add(";\n}")
 
 class WhileLoop ( object ):
 
