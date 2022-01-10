@@ -32,7 +32,7 @@ constexpr int LINEITEM_SIZE = 6001215;       /// SF1
 constexpr int GLOBAL_HT_SIZE = LINEITEM_SIZE * 2;  /// In global memory
 //constexpr int GLOBAL_HT_SIZE = 8192;  /// In global memory
 
-__device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, int SHARED_MEMORY_HT_SIZE, agg_ht<apayl2>* g_aht2) {
+__device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, agg_ht<apayl2>* g_aht2) {
     /// Copy the shared memory hash table (pre-aggreagation) into the global hash table.
     {
         /// <-- START: first half of the kernel 2
@@ -161,7 +161,7 @@ __global__ void krnl_lineitem1(
             //// insert the tuple into the global memory hash table.
             __syncthreads();  ////
             if (HT_FULL_FLAG != 0) {
-                sm_to_gm(aht2, SHARED_MEMORY_HT_SIZE, g_aht2);
+                sm_to_gm(aht2, g_aht2);
                 __threadfence_block(); /// Ensure the ordering:
                 initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
                 if (threadIdx.x == 0) HT_FULL_FLAG = 0;
@@ -189,7 +189,7 @@ __global__ void krnl_lineitem1(
         }
     }
 #endif
-    sm_to_gm(aht2, SHARED_MEMORY_HT_SIZE, g_aht2);
+    sm_to_gm(aht2, g_aht2);
 }
 
 __global__ void krnl_reduce(
