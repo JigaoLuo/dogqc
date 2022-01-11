@@ -34,59 +34,57 @@ constexpr int GLOBAL_HT_SIZE = LINEITEM_SIZE * 2;  /// In global memory
 
 __device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, agg_ht<apayl2>* g_aht2) {
     /// Copy the shared memory hash table (pre-aggreagation) into the global hash table.
-    {
-        /// <-- START: first half of the kernel 2
-        int att4_llinenum;
-        int tid_aggregation2 = 0;
-        unsigned loopVar = threadIdx.x;  ///
-        unsigned step = blockDim.x;  ///
-        unsigned flushPipeline = 0;
-        int active = 0;
-        while(!(flushPipeline)) {
-            tid_aggregation2 = loopVar;
-            active = (loopVar < SHARED_MEMORY_HT_SIZE);  ///
-            // flush pipeline if no new elements
-            flushPipeline = !(__ballot_sync(ALL_LANES,active));
-            if(active) {
-            }
-            // -------- scan aggregation ht (opId: 2) --------
-            if(active) {
-                active &= ((aht2[tid_aggregation2].lock.lock == OnceLock::LOCK_DONE));
-            }
-            if(active) {
-                apayl2 payl = aht2[tid_aggregation2].payload;
-                att4_llinenum = payl.att4_llinenum;
-            }
-            if(active) {
-            }
-            /// <-- END: first half of the kernel 2
-
-
-            /// <-- START: second half of the kernel 1
-            /// Insert to global hash table.
-            int bucket = 0;
-            if(active) {
-                uint64_t hash2 = 0;
-                hash2 = 0;
-                if(active) {
-                    hash2 = hash ( (hash2 + ((uint64_t)att4_llinenum)));
-                }
-                apayl2 payl;
-                payl.att4_llinenum = att4_llinenum;
-                int bucketFound = 0;
-                int numLookups = 0;
-                while(!(bucketFound)) {
-                    bucket = hashAggregateGetBucket ( g_aht2, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
-                    apayl2 probepayl = g_aht2[bucket].payload;  ////
-                    bucketFound = 1;
-                    bucketFound &= ((payl.att4_llinenum == probepayl.att4_llinenum));
-                }
-            }
-            if(active) {
-            }
-            /// <-- END: second half of the kernel 1
-            loopVar += step;
+    /// <-- START: first half of the kernel 2
+    int att4_llinenum;
+    int tid_aggregation2 = 0;
+    unsigned loopVar = threadIdx.x;  ///
+    unsigned step = blockDim.x;  ///
+    unsigned flushPipeline = 0;
+    int active = 0;
+    while(!(flushPipeline)) {
+        tid_aggregation2 = loopVar;
+        active = (loopVar < SHARED_MEMORY_HT_SIZE);  ///
+        // flush pipeline if no new elements
+        flushPipeline = !(__ballot_sync(ALL_LANES,active));
+        if(active) {
         }
+        // -------- scan aggregation ht (opId: 2) --------
+        if(active) {
+            active &= ((aht2[tid_aggregation2].lock.lock == OnceLock::LOCK_DONE));
+        }
+        if(active) {
+            apayl2 payl = aht2[tid_aggregation2].payload;
+            att4_llinenum = payl.att4_llinenum;
+        }
+        if(active) {
+        }
+        /// <-- END: first half of the kernel 2
+
+
+        /// <-- START: second half of the kernel 1
+        /// Insert to global hash table.
+        int bucket = 0;
+        if(active) {
+            uint64_t hash2 = 0;
+            hash2 = 0;
+            if(active) {
+                hash2 = hash ( (hash2 + ((uint64_t)att4_llinenum)));
+            }
+            apayl2 payl;
+            payl.att4_llinenum = att4_llinenum;
+            int bucketFound = 0;
+            int numLookups = 0;
+            while(!(bucketFound)) {
+                bucket = hashAggregateGetBucket ( g_aht2, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
+                apayl2 probepayl = g_aht2[bucket].payload;  ////
+                bucketFound = 1;
+                bucketFound &= ((payl.att4_llinenum == probepayl.att4_llinenum));
+            }
+        }
+        if(active) {
+        }
+        /// <-- END: second half of the kernel 1
+        loopVar += step;
     }
 }
 
