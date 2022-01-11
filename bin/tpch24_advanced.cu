@@ -91,7 +91,7 @@ __device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, agg_ht<apayl2>* g_aht2) {
 }
 
 __global__ void krnl_lineitem1(
-    int* iatt4_llinenum, int* nout_result, int* oatt4_llinenum, agg_ht<apayl2>* g_aht2) {  ///
+    int* iatt4_llinenum, agg_ht<apayl2>* g_aht2) {  ///
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
     extern __shared__ char shared_memory[];
@@ -109,15 +109,15 @@ __global__ void krnl_lineitem1(
         int att4_llinenum;
 
         int tid_lineitem1 = 0;
-        unsigned loopVar__ = ((blockIdx.x * blockDim.x) + threadIdx.x);
+        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);
         unsigned step = (blockDim.x * gridDim.x);
-        unsigned flushPipeline__ = 0;
+        unsigned flushPipeline = 0;
         int active = 0;
-        while(!(flushPipeline__)) {
-            tid_lineitem1 = loopVar__;
-            active = (loopVar__ < LINEITEM_SIZE);
+        while(!(flushPipeline)) {
+            tid_lineitem1 = loopVar;
+            active = (loopVar < LINEITEM_SIZE);
             // flush pipeline if no new elements
-            flushPipeline__ = !(__ballot_sync(ALL_LANES,active));
+            flushPipeline = !(__ballot_sync(ALL_LANES,active));
             if(active) {
                 att4_llinenum = iatt4_llinenum[tid_lineitem1];
             }
@@ -133,7 +133,7 @@ __global__ void krnl_lineitem1(
                 payl.att4_llinenum = att4_llinenum;
                 int bucketFound = 0;
                 int numLookups = 0;
-                while(!(bucketFound)) {   ////
+                while(!(bucketFound)) {
                     bucket = hashAggregateGetBucket ( aht2, SHARED_MEMORY_HT_SIZE, hash2, numLookups, &(payl));  ///
                     if (bucket != -1) {  ////
                         apayl2 probepayl = aht2[bucket].payload;
@@ -142,7 +142,7 @@ __global__ void krnl_lineitem1(
                     }
                     else {
                         assert(bucketFound == 0);  ////
-                        loopVar__ -= step;
+                        loopVar -= step;
                         atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
                         break;  ////
                     }
@@ -168,7 +168,7 @@ __global__ void krnl_lineitem1(
                 __syncthreads();  ////
             }
             ////
-            loopVar__ += step;
+            loopVar += step;
         }
     }
 
@@ -177,16 +177,6 @@ __global__ void krnl_lineitem1(
     if (threadIdx.x == 0) {
         /// Allow only one print per block here.
         printf("In Block %d: num_collision: %d\n", blockIdx.x, num_collision);
-    }
-#endif
-
-#ifdef HT_CHECKER
-    if (threadIdx.x == 0) {
-        if (HT_FULL_FLAG != 0) {
-            printf("FUll.\n");
-        } else {
-            printf("Not FULL.\n");
-        }
     }
 #endif
     sm_to_gm(aht2, g_aht2);
@@ -344,7 +334,7 @@ int main() {
         const int shared_memory_usage = (sizeof(agg_ht_sm<apayl2>) + sizeof(int)) * SHARED_MEMORY_HT_SIZE;
         std::cout << "Shared memory usage: " << shared_memory_usage << " bytes" << std::endl;
         cudaFuncSetAttribute(krnl_lineitem1, cudaFuncAttributeMaxDynamicSharedMemorySize, /*65536*/ shared_memory_usage);
-        krnl_lineitem1<<<gridsize, blocksize, shared_memory_usage>>>(d_iatt4_llinenum, d_nout_result, d_oatt4_llinenum, d_aht2);
+        krnl_lineitem1<<<gridsize, blocksize, shared_memory_usage>>>(d_iatt4_llinenum, d_aht2);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_lineitem11 = std::clock();
