@@ -1,5 +1,6 @@
 from dogqc.cudalang import *
 import dogqc.identifier as ident
+from dogqc.kernel import DeviceFunctionStatus
 
 class Variable ( object ):
 
@@ -17,13 +18,17 @@ class Variable ( object ):
         return Variable ( dataType, name, numElements, False )
     
     @staticmethod
-    def val ( dataType, name, codegen=None, init=None ):
+    def val ( dataType, name, codegen=None, init=None, generate_deviceFunction=True ):
         v = Variable ( dataType, name, 1, False )
         v.ishostvalue = True
         if codegen is not None and init is None:
             v.declare ( codegen )
+            if generate_deviceFunction and hasattr(codegen, 'deviceFunction') and codegen.deviceFunction.status == DeviceFunctionStatus.STARTED and init is None:
+                v.declare( codegen.deviceFunction )
         if codegen is not None and init is not None:
             v.declareAssign ( init, codegen )
+            if generate_deviceFunction and  hasattr(codegen, 'deviceFunction') and codegen.deviceFunction.status == DeviceFunctionStatus.STARTED and init is not None:
+                v.declareAssign( init, codegen.deviceFunction )
         return v
     
     @staticmethod

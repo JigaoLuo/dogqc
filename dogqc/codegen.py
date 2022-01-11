@@ -11,7 +11,7 @@ from dogqc.variable import Variable
 from dogqc.code import Code
 from dogqc.code import Timestamp
 from dogqc.gpuio import GpuIO
-from dogqc.kernel import Kernel, KernelCall
+from dogqc.kernel import Kernel, KernelCall, DeviceFunction
 from dogqc.types import Type
 from dogqc.cudalang import CType
 
@@ -22,6 +22,8 @@ class CodeGenerator ( object ):
         self.read = Code()
         self.types = Code()
         self.globalConstant = Code()
+        self.deviceFunction = DeviceFunction("sm_to_gm")
+        self.deviceFunctions = [] # TODO(jigao): multiple functions
         self.kernels = []
         self.currentKernel = None
         self.kernelCalls = []
@@ -50,6 +52,11 @@ class CodeGenerator ( object ):
         c = Variable.val ( CType.STR_TYPE, "c" + str ( self.constCounter ) ) 
         emit ( assign ( declare ( c ), call ( "stringConstant", [ "\"" + token + "\"", len(token) ] ) ), self.init() )
         return c
+
+    # TODO(jigao): multiple functions
+    def openDeviceFunction ( self, deviceFunction ):
+        self.deviceFunctions.append ( deviceFunction )
+        return deviceFunction
 
     def openKernel ( self, kernel ):
         self.kernels.append ( kernel )
@@ -126,6 +133,8 @@ class CodeGenerator ( object ):
             code.add ( qlib.getCudaIncludes () )
         code.addFragment ( self.types )
         code.addFragment ( self.globalConstant )
+        if self.deviceFunction.body.hasCode:
+            code.add ( self.deviceFunction.getDeviceFunction() )
         for k in self.kernels: 
             code.add(k.getKernelCode())
         code.add( "int main() {" )

@@ -38,6 +38,10 @@ class Code ( object ):
         if isinstance ( line, str ) and newline:
             self.content += "\n"
         self.hasCode = True
+
+    def addFront(self, line):
+        self.content = str(line) + "\n" + self.content
+        self.hasCode = True
     
     def addFragment ( self, fragment ):
         if not fragment.hasCode:

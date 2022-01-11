@@ -1,3 +1,5 @@
+SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR = "SHARED_MEMORY_HT_SIZE"
+GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER = "GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER"
 
 class CType( object ):
     INT = "int"
@@ -134,11 +136,13 @@ class StructComparatorClause(object):
 
 class WhileLoop ( object ):
 
-    def __init__( self, condition, code ): 
+    def __init__( self, condition, code ):
         self.code = code
         code.add ( "while(" + str ( condition ) + ") {")
+        if hasattr(self.code, 'deviceFunction') and self.code.deviceFunction.status == 2: # 2 for STARTED
+            self.code.deviceFunction.add("while(" + str(condition) + ") {")
 
-    def __enter__ ( self ): 
+    def __enter__ ( self ):
         return self
   
     def __exit__ ( self, exc_type, exc_val, exc_tb ):
@@ -146,10 +150,13 @@ class WhileLoop ( object ):
     
     def break_ ( self ):
         self.code.add ( "break;" )
-    
+        if hasattr(self.code, 'deviceFunction') and self.code.deviceFunction.status == 2: # 2 for STARTED
+            self.code.deviceFunction.add("break;")
+
     def close ( self ):
         self.code.add ( "}" )
-
+        if hasattr(self.code, 'deviceFunction') and self.code.deviceFunction.status == 2: # 2 for STARTED
+            self.code.deviceFunction.add("}")
 
 class ForLoop ( object ):
 
@@ -189,10 +196,12 @@ class UnrolledForLoop ( object ):
  
 class IfClause ( object ):
  
-    def __init__( self, condition, code ): 
+    def __init__( self, condition, code ):
         self.code = code
         code.add ( "if(" + str(condition) + ") {")
-    
+        if hasattr(self.code, 'deviceFunction') and self.code.deviceFunction.status == 2: # 2 for STARTED
+            self.code.deviceFunction.add("if(" + str(condition) + ") {")
+
     def __enter__ ( self ): 
         return self
   
@@ -201,6 +210,8 @@ class IfClause ( object ):
 
     def close ( self ):
         self.code.add ( "}" )
+        if hasattr(self.code, 'deviceFunction') and self.code.deviceFunction.status == 2: # 2 for STARTED
+            self.code.deviceFunction.add("}")
 
 class ElseIfClause ( object ):
  

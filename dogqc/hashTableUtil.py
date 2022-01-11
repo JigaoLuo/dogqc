@@ -3,7 +3,7 @@ from dogqc.cudalang import *
 import dogqc.identifier as ident
 import dogqc.querylib as qlib
 from dogqc.variable import Variable
-from dogqc.kernel import Kernel, KernelCall
+from dogqc.kernel import Kernel, KernelCall, DeviceFunction, DeviceFunctionStatus
 from dogqc.types import Type
 from dogqc.relationalAlgebra import Reduction
 
@@ -13,17 +13,22 @@ class Hash ( object ):
     @staticmethod 
     def attributes ( attributes, hashVar, ctxt ):
         emit ( assign ( hashVar, intConst(0) ), ctxt.codegen )
+        if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+            emit(assign(hashVar, intConst(0)), ctxt.codegen.deviceFunction)
         for id, a in attributes.items():
             acc = ctxt.attFile.access ( a )
             if a.dataType == Type.STRING:
                 acc = call ( "stringHash", [ acc ] ) 
                 #acc = call ( "stringHashPushDown", [ ctxt.vars.activeVar, acc ] ) 
                 emit ( assign ( hashVar, call ( qlib.Fct.HASH, [ add ( hashVar, acc ) ] ) ), ctxt.codegen )
+                if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+                    emit(assign(hashVar, call(qlib.Fct.HASH, [add(hashVar, acc)])), ctxt.codegen.deviceFunction)
             else:
                 acc = cast ( CType.UINT64, acc )
                 with IfClause ( ctxt.vars.activeVar, ctxt.codegen ):
                     emit ( assign ( hashVar, call ( qlib.Fct.HASH, [ add ( hashVar, acc ) ] ) ), ctxt.codegen )
-
+                    if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+                        emit(assign(hashVar, call(qlib.Fct.HASH, [add(hashVar, acc)])), ctxt.codegen.deviceFunction)
 
         return hashVar
                 
@@ -44,8 +49,9 @@ class Payload ( object ):
         self.vars = dict()
 
         # hash table's size
-        shared_memory_ht_size = 1024 # TODO(jigao): calculate this.
-        Variable.val ("constexpr " + CType.INT, "SHARED_MEMORY_HT_SIZE", ctxt.codegen.globalConstant, shared_memory_ht_size)
+        if not ctxt.codegen.globalConstant.hasCode:
+            shared_memory_ht_size = 1024 # TODO(jigao): calculate this.
+            Variable.val ("constexpr " + CType.INT, SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR, ctxt.codegen.globalConstant, intConst(shared_memory_ht_size))
 
         # hash table's element struct
         with StructClause ( self.typeName, ctxt.codegen.types ):
@@ -62,6 +68,8 @@ class Payload ( object ):
         matvar = Variable.val ( self.typeName, varName, code )
         for id, a in self.attributes.items():
             emit ( assign ( member ( matvar, self.vars[id] ), ctxt.attFile.access ( a ) ), code )
+            if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+                emit(assign(member(matvar, self.vars[id]), ctxt.attFile.access(a)), ctxt.codegen.deviceFunction)
         return matvar
 
     def dematerialize ( self, matvar, ctxt ):
@@ -73,11 +81,17 @@ class Payload ( object ):
                     
     def checkEquality ( self, equalvar, payla, paylb, ctxt ):
         emit ( assign ( equalvar, intConst (1) ), ctxt.codegen )
+        if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+            emit(assign(equalvar, intConst(1)), ctxt.codegen.deviceFunction)
         for (id, attr) in self.attributes.items():
             if attr.dataType == Type.STRING:
                 emit ( assignAnd ( equalvar, stringEquals ( self.access ( payla, attr ), self.access ( paylb, attr ) ) ), ctxt.codegen )
+                if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+                    emit(assignAnd(equalvar, stringEquals(self.access(payla, attr), self.access(paylb, attr))), ctxt.codegen.deviceFunction)
             else:
                 emit ( assignAnd ( equalvar, equals ( self.access ( payla, attr ), self.access ( paylb, attr ) ) ), ctxt.codegen )
+                if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+                    emit(assignAnd(equalvar, equals(self.access(payla, attr), self.access(paylb, attr))), ctxt.codegen.deviceFunction)
 
     def access ( self, paylVar, a ):
         return member ( paylVar, self.vars [ a.id ] ) 
