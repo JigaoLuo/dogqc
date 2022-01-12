@@ -1,8 +1,11 @@
+# TODO: add into function
 SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR = "SHARED_MEMORY_HT_SIZE"
 GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER = "GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER"
 SHARED_MEMORY_USAGE = "shared_memory_usage"
 cudaFuncSetAttribute = "cudaFuncSetAttribute"
 cudaFuncAttributeMaxDynamicSharedMemorySize = "cudaFuncAttributeMaxDynamicSharedMemorySize"
+HT_FULL_FLAG = "HT_FULL_FLAG"
+SHARED_MEMORY = "shared_memory"
 
 class CType( object ):
     INT = "int"
@@ -265,6 +268,15 @@ def declareSharedArray ( variable, length ):
 def declareShared ( variable ):
     return "__shared__ " + variable.dataType + " " + variable.name
 
+def declareSharedEasy ( dataType, name ):
+    return "__shared__ " + dataType + " " + name
+
+def declareVolatileSharedEasy ( dataType, name ):
+    return "volatile __shared__ " + dataType + " " + name
+
+def declareexternSharedArrayEasy ( dataType, name ):
+    return "extern __shared__ " + dataType + " " + name+ "[]"
+
 def declarePointer ( variable ):
     return ptr ( variable.dataType ) + " " + variable.name
 
@@ -429,6 +441,12 @@ def clzIntr ( expr ):
 
 def ffsIntr ( expr ):
     return "__ffs(" + str(expr) + ")"
+
+def initSMAggHT ( expr ):
+    return "initSMAggHT(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + ")"
+
+def initSMAggArray ( expr ):
+    return "initSMAggArray(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + ")"
 
 def printf ( string, params=[] ):
     if params != []:
