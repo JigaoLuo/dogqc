@@ -1,4 +1,3 @@
-# TODO: add into function
 SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR = "SHARED_MEMORY_HT_SIZE"
 GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER = "GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER"
 SHARED_MEMORY_USAGE = "shared_memory_usage"
@@ -448,6 +447,9 @@ def initSMAggHT ( expr ):
 def initSMAggArray ( expr ):
     return "initSMAggArray(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + ")"
 
+def assertion ( expr ):
+    return "assert(" + str(expr) + ")"
+
 def printf ( string, params=[] ):
     if params != []:
         params = map(str, params)
@@ -479,6 +481,12 @@ def blockIdx_x ( ):
 
 def gridDim_x ( ):
     return "gridDim.x"
+
+def threadfence ( ):
+    return "__threadfence()"
+
+def threadfence_block ( ):
+    return "__threadfence_block()"
 
 def syncthreads ( ):
     return "__syncthreads()"

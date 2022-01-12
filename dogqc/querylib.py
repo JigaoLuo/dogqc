@@ -3,6 +3,7 @@ from dogqc.code import Code
 # includes
 def getIncludes ():
     code = Code()
+    code.add("#include <cassert>")
     code.add("#include <list>")
     code.add("#include <unordered_map>")
     code.add("#include <vector>")

@@ -326,6 +326,13 @@ class ScanLoop ( object ):
         if self.scanType == ScanType.KERNEL:
             emit ( assignAdd ( self.ctxt.vars.loopVar, self.ctxt.vars.stepVar ), self.ctxt.codegen )
             self.kernelLoop.close()
+            if self.ctxt.codegen.currentKernel.doGroup:
+                emit( syncthreads(), self.ctxt.codegen )
+                # device function call: sm_to_gm
+                deviceFunctionPara = []
+                for name, c in self.ctxt.codegen.deviceFunction.inputColumns.items():
+                    deviceFunctionPara.append( c.name )
+                emit ( call ( self.ctxt.codegen.deviceFunction.functionName, deviceFunctionPara ), self.ctxt.codegen )
             self.ctxt.codegen.closeKernel()
         elif self.scanType == ScanType.INNER:
             self.innerLoop.close()
@@ -448,7 +455,7 @@ class AggregationTranslator ( UnaryTranslator ):
         htmem.addAggregationAttributes ( self.algExpr.aggregateAttributes, self.algExpr.aggregateTuples, ctxt )
         htmem.addToKernel ( ctxt.codegen.currentKernel )
 
-        ## device function sm_to_gm: generate the later part aka second half of the kernel 1
+        ## device function sm_to_gm: generate the second half of the kernel 1
         if self.algExpr.doGroup:
             assert ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.INIT
             ctxt.codegen.deviceFunction.status = DeviceFunctionStatus.STARTED
@@ -456,6 +463,7 @@ class AggregationTranslator ( UnaryTranslator ):
         # find bucket
         bucketVar = Variable.val ( CType.INT, "bucket", ctxt.codegen, intConst(0) )
         if self.algExpr.doGroup:
+            assert ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED
             with IfClause ( ctxt.vars.activeVar, ctxt.codegen ):
                 #payload
                 hashVar = Variable.val ( CType.UINT64, "hash" + str ( self.algExpr.opId ), ctxt.codegen, intConst(0) )
@@ -463,21 +471,28 @@ class AggregationTranslator ( UnaryTranslator ):
                 payl = self.payload.materialize ( "payl", ctxt.codegen, ctxt )
                 bucketFound = Variable.val ( CType.INT, "bucketFound", ctxt.codegen, intConst(0) )
                 numLookups = Variable.val ( CType.INT, "numLookups", ctxt.codegen, intConst(0) )
-                
-                with WhileLoop ( notLogic ( bucketFound ), ctxt.codegen ) as loop:
-                    # allocate empty bucket or get tid from bucket
-                    emit ( assign ( bucketVar, call ( qlib.Fct.HASH_AGG_BUCKET, 
-                        [ htmem.ht, htmem.numEntries, hashVar, numLookups, addressof ( payl ) ] ) ), ctxt.codegen )
-                    if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
-                        emit( assign(bucketVar, call(qlib.Fct.HASH_AGG_BUCKET,
-                            ["g_" + htmem.ht.name, htmem.numEntries, hashVar, numLookups, addressof(payl)])), ctxt.codegen.deviceFunction ) # Use prefix "g_" as global ht
-                    # verify grouping attributes from bucket
-                    probepayl = Variable.val ( self.payload.getType(), "probepayl", ctxt.codegen, member ( htmem.ht.arrayAccess ( bucketVar ), "payload" ), False )
-                    Variable.val ( self.payload.getType(), "probepayl", ctxt.codegen.deviceFunction, "g_" + member ( htmem.ht.arrayAccess ( bucketVar ), "payload" ) ) # Use prefix "g_" as global ht
-                    self.payload.checkEquality ( bucketFound, payl, probepayl, ctxt )
+
+                # shared memory ht logic: if full, then bucket=-1 and start to copy out to the global memory ht.
+                with WhileLoop( notLogic( bucketFound ), ctxt.codegen ) as loop:
+                    emit ( assign ( bucketVar, call ( qlib.Fct.HASH_AGG_BUCKET,
+                        [ htmem.ht,            SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR, hashVar, numLookups, addressof ( payl ) ] ) ), ctxt.codegen )
+                    emit( assign(bucketVar, call(qlib.Fct.HASH_AGG_BUCKET,
+                        ["g_" + htmem.ht.name, htmem.numEntries,                    hashVar, numLookups, addressof(payl)])), ctxt.codegen.deviceFunction ) # Use prefix "g_" as global ht
+
+                    with IfClause( notEquals( bucketVar, intConst(-1) ), ctxt.codegen):
+                        # verify grouping attributes from bucket
+                        probepayl = Variable.val( self.payload.getType(), "probepayl", ctxt.codegen, member( htmem.ht.arrayAccess( bucketVar ), "payload" ), False )
+                        Variable.val( self.payload.getType(), "probepayl", ctxt.codegen.deviceFunction, "g_" + member( htmem.ht.arrayAccess( bucketVar ),"payload" ) ) # Use prefix "g_" as global ht
+                        self.payload.checkEquality( bucketFound, payl, probepayl, ctxt )
+                    with ElseClause(ctxt.codegen):
+                        emit ( assertion( equals ( bucketFound, intConst(0) ) ) , ctxt.codegen )
+                        emit ( assignSub( ctxt.vars.loopVar, ctxt.vars.stepVar ), ctxt.codegen )
+                        emit ( atomicAdd ( cast ( ptr( CType.INT ), addressof( HT_FULL_FLAG ) ), intConst(1) ), ctxt.codegen )
+                        emit ( breakLoop(), ctxt.codegen )
 
         # atomic summation of aggregates
-        with IfClause ( ctxt.vars.activeVar, ctxt.codegen ):
+        with IfClause ( andLogic( ctxt.vars.activeVar, notEquals( bucketVar, intConst(-1) ) ) if self.algExpr.doGroup
+                        else ctxt.vars.activeVar, ctxt.codegen ):
             for id, (inId, reduction) in self.algExpr.aggregateTuples.items():
                 typ = ctxt.codegen.langType ( self.algExpr.aggregateAttributes[id].dataType )
                 agg = addressof ( htmem.accessAggregationAttribute ( id, bucketVar ) )
@@ -490,42 +505,82 @@ class AggregationTranslator ( UnaryTranslator ):
                     if inId in ctxt.attFile.isNullFile:
                         with IfClause ( notLogic ( ctxt.attFile.isNullFile [ inId ] ), ctxt.codegen ):
                             emit ( atomAdd, ctxt.codegen )
-                            if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
-                                emit(atomAddDeviceFunction, ctxt.codegen.deviceFunction)
+                            if self.algExpr.doGroup:
+                                emit( atomAddDeviceFunction, ctxt.codegen.deviceFunction )
                     else:
                         emit ( atomAdd, ctxt.codegen )
-                        if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
-                            emit(atomAddDeviceFunction, ctxt.codegen.deviceFunction)
+                        if self.algExpr.doGroup:
+                            emit( atomAddDeviceFunction, ctxt.codegen.deviceFunction )
                     continue
                 val = cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) )
                 valDeviceFunction = cast ( typ, intConst(GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER + str(id) ) )
                 # min
                 if reduction == Reduction.MIN:
                     emit ( atomicMin ( agg, val ), ctxt.codegen )
-                    if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+                    if self.algExpr.doGroup:
                         emit(atomicMin(aggDeviceFunction, valDeviceFunction), ctxt.codegen.deviceFunction)
                 # max
                 elif reduction == Reduction.MAX:
                     emit ( atomicMax ( agg, val ), ctxt.codegen )
-                    if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+                    if self.algExpr.doGroup:
                         emit(atomicMax(aggDeviceFunction, valDeviceFunction), ctxt.codegen.deviceFunction)
                 # sum
                 elif reduction == Reduction.SUM:
                     emit ( atomicAdd ( agg, val ), ctxt.codegen )
-                    if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+                    if self.algExpr.doGroup:
                         emit(atomicAdd(aggDeviceFunction, valDeviceFunction), ctxt.codegen.deviceFunction)
                 # avg
                 elif reduction == Reduction.AVG:
                     emit ( atomicAdd ( agg, val ), ctxt.codegen )
-                    if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+                    if self.algExpr.doGroup:
                         emit(atomicAdd(aggDeviceFunction, valDeviceFunction), ctxt.codegen.deviceFunction)
 
         self.htmem = htmem
 
-        if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.STARTED:
+        if self.algExpr.doGroup:
+            ## Finish the device function sm_to_gm
             ctxt.codegen.deviceFunction.status = DeviceFunctionStatus.END
-            ctxt.codegen.deviceFunction.add("}")
-            emit(assignAdd(ctxt.vars.loopVar, ctxt.vars.stepVar), ctxt.codegen.deviceFunction)
+            emit( assignAdd( ctxt.vars.loopVar, ctxt.vars.stepVar ), ctxt.codegen.deviceFunction )
+            ctxt.codegen.deviceFunction.add( "}" )
+
+            # prepare the parameters of device function sm_to_gm
+            assert ctxt.codegen.deviceFunction.inputColumns == {}
+            for name, value in ctxt.codegen.currentKernel.inputColumns.items():
+                if str.__contains__( name, "aht" ) or str.__contains__( name, "agg" ) :
+                    value_cp = copy.deepcopy(value)
+                    ctxt.codegen.deviceFunction.inputColumns[name] = value_cp
+            # shared memory agg_ht_sm instead of agg_ht
+            for name, value in ctxt.codegen.deviceFunction.inputColumns.items():
+                if "agg_ht" in value.dataType:
+                    value.dataType = value.dataType.replace("agg_ht", "agg_ht_sm")
+            # add global memory agg_ht using copying and duplicating
+            for name, value in ctxt.codegen.currentKernel.inputColumns.items():
+                if str.__contains__( name, "aht" ) or str.__contains__( name, "agg" ) :
+                    global_ht_name = "g_" + name
+                    global_ht_col = copy.deepcopy(value)
+                    global_ht_col.name = global_ht_name
+                    ctxt.codegen.deviceFunction.inputColumns[global_ht_name] = global_ht_col
+
+            ## Finish the kernel
+            assert ctxt.codegen.deviceFunction.inputColumns != {}
+            emit( syncthreads(), ctxt.codegen )
+            with IfClause( notEquals( HT_FULL_FLAG, intConst(0) ), ctxt.codegen ):
+                # device function call: sm_to_gm
+                deviceFunctionPara = []
+                for name, c in ctxt.codegen.deviceFunction.inputColumns.items():
+                    deviceFunctionPara.append( c.name )
+                emit ( call ( ctxt.codegen.deviceFunction.functionName, deviceFunctionPara ), ctxt.codegen)
+                emit ( threadfence_block(), ctxt.codegen )
+                # init the shared memory hash tables
+                for name, c in ctxt.codegen.currentKernel.inputColumns.items():
+                    if str.__contains__(name, "aht"):
+                        emit( initSMAggHT(name), ctxt.codegen )
+                    elif str.__contains__(name, "agg"):
+                        emit( initSMAggArray(name), ctxt.codegen )
+                # re-set the flag
+                with IfClause( equals( threadIdx_x(), intConst(0) ), ctxt.codegen ):
+                    emit ( assign( HT_FULL_FLAG, intConst(0) ), ctxt.codegen )
+                emit ( syncthreads(), ctxt.codegen)
 
     def consumeHashTable ( self, ctxt ):
         htmem = self.htmem
@@ -536,7 +591,7 @@ class AggregationTranslator ( UnaryTranslator ):
         self.algExpr.scanTableId = 1
 
 
-        ## device function sm_to_gm: generate the first part aka first half of the kernel 2
+        ## device function sm_to_gm: generate the first half of the kernel 2
         assert ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.END or ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.INIT
         with ScanLoop ( ctxt.vars.scanTid, ScanType.KERNEL, False, htmem.getTable ( self.algExpr.opId ), dict(), self.algExpr, ctxt ):
             commentOperator ("scan aggregation ht", self.algExpr.opId, ctxt.codegen)
@@ -560,17 +615,6 @@ class AggregationTranslator ( UnaryTranslator ):
             ## Bulk-add the device function sm_to_gm.
             if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.END:
                 ctxt.codegen.deviceFunction.init = copy.deepcopy(ctxt.codegen.currentKernel.init)
-                ctxt.codegen.deviceFunction.inputColumns = copy.deepcopy(ctxt.codegen.currentKernel.inputColumns)
-                # shared memory agg_ht_sm instead of agg_ht
-                for _, value in ctxt.codegen.deviceFunction.inputColumns.items():
-                    if "agg_ht" in value.dataType:
-                        value.dataType = value.dataType.replace("agg_ht", "agg_ht_sm")
-                # add global memory agg_ht
-                for key, value in ctxt.codegen.currentKernel.inputColumns.items():
-                    global_ht_name = "g_" + key
-                    global_ht_col = copy.deepcopy(value)
-                    global_ht_col.name = global_ht_name
-                    ctxt.codegen.deviceFunction.inputColumns [global_ht_name] = global_ht_col
                 # Regular Expression Replacement from the kernel body
                 kernel_body = copy.deepcopy(ctxt.codegen.currentKernel.body)
                 kernel_body.content = re.sub(r"unsigned loopVar.*;", "unsigned loopVar = threadIdx.x;", kernel_body.content)
