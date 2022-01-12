@@ -106,73 +106,72 @@ __global__ void krnl_lineitem1(
     initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
     __syncthreads();
 
-    {
-        /// The first old kenrel
-        int att5_llinenum;
 
-        int tid_lineitem1 = 0;
-        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);
-        unsigned step = (blockDim.x * gridDim.x);
-        unsigned flushPipeline = 0;
-        int active = 0;
-        while(!(flushPipeline)) {
-            tid_lineitem1 = loopVar;
-            active = (loopVar < LINEITEM_SIZE);
-            // flush pipeline if no new elements
-            flushPipeline = !(__ballot_sync(ALL_LANES,active));
-            if(active) {
-                att5_llinenum = iatt5_llinenum[tid_lineitem1];
-            }
-            // -------- aggregation (opId: 2) --------
-            int bucket = 0;
-            if(active) {
-                uint64_t hash2 = 0;
-                hash2 = 0;
-                if(active) {
-                    hash2 = hash ( (hash2 + ((uint64_t)att5_llinenum)));
-                }
-                apayl2 payl;
-                payl.att5_llinenum = att5_llinenum;
-                int bucketFound = 0;
-                int numLookups = 0;
-                while(!(bucketFound)) {
-                    bucket = hashAggregateGetBucket ( aht2, SHARED_MEMORY_HT_SIZE, hash2, numLookups, &(payl));  ///
-                    if (bucket != -1) {
-                        apayl2 probepayl = aht2[bucket].payload;
-                        bucketFound = 1;
-                        bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
-                    } else {
-                        assert(bucketFound == 0);  ////
-                        loopVar -= step;
-                        atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
-                        break;  ////
-                    }
-                }
-#ifdef COLLISION_PRINT
-                atomicAdd(&num_collision, numLookups - 1);
-#endif
-            }
-            if(active && bucket != -1) {  ////
-                atomicAdd(&(agg1[bucket]), ((int)1));
-            }
+    /// The first old kenrel
+    int att5_llinenum;
 
-            /// Implication and Disjunction: P->Q <=>  ^P OR Q
-            /// bucket==-1 -> HT_FULL_FLAG!=0
-            assert(bucket != -1 || HT_FULL_FLAG != 0);
-
-            //// insert the tuple into the global memory hash table.
-            __syncthreads();  ////
-            if (HT_FULL_FLAG != 0) {
-                sm_to_gm(aht2, agg1, g_aht2, g_agg1);
-                __threadfence_block(); /// Ensure the ordering:
-                initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
-                initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
-                if (threadIdx.x == 0) HT_FULL_FLAG = 0;
-                __syncthreads();  ////
-            }
-            ////
-            loopVar += step;
+    int tid_lineitem1 = 0;
+    unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);
+    unsigned step = (blockDim.x * gridDim.x);
+    unsigned flushPipeline = 0;
+    int active = 0;
+    while(!(flushPipeline)) {
+        tid_lineitem1 = loopVar;
+        active = (loopVar < LINEITEM_SIZE);
+        // flush pipeline if no new elements
+        flushPipeline = !(__ballot_sync(ALL_LANES,active));
+        if(active) {
+            att5_llinenum = iatt5_llinenum[tid_lineitem1];
         }
+        // -------- aggregation (opId: 2) --------
+        int bucket = 0;
+        if(active) {
+            uint64_t hash2 = 0;
+            hash2 = 0;
+            if(active) {
+                hash2 = hash ( (hash2 + ((uint64_t)att5_llinenum)));
+            }
+            apayl2 payl;
+            payl.att5_llinenum = att5_llinenum;
+            int bucketFound = 0;
+            int numLookups = 0;
+            while(!(bucketFound)) {
+                bucket = hashAggregateGetBucket ( aht2, SHARED_MEMORY_HT_SIZE, hash2, numLookups, &(payl));  ///
+                if (bucket != -1) {
+                    apayl2 probepayl = aht2[bucket].payload;
+                    bucketFound = 1;
+                    bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
+                } else {
+                    assert(bucketFound == 0);  ////
+                    loopVar -= step;
+                    atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
+                    break;  ////
+                }
+            }
+#ifdef COLLISION_PRINT
+            atomicAdd(&num_collision, numLookups - 1);
+#endif
+        }
+        if(active && bucket != -1) {  ////
+            atomicAdd(&(agg1[bucket]), ((int)1));
+        }
+
+        /// Implication and Disjunction: P->Q <=>  ^P OR Q
+        /// bucket==-1 -> HT_FULL_FLAG!=0
+        assert(bucket != -1 || HT_FULL_FLAG != 0);
+
+        //// insert the tuple into the global memory hash table.
+        __syncthreads();  ////
+        if (HT_FULL_FLAG != 0) {
+            sm_to_gm(aht2, agg1, g_aht2, g_agg1);
+            __threadfence_block(); /// Ensure the ordering:
+            initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
+            initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
+            if (threadIdx.x == 0) HT_FULL_FLAG = 0;
+            __syncthreads();  ////
+        }
+        ////
+        loopVar += step;
     }
 
     __syncthreads();  ///
