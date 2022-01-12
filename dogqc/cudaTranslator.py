@@ -434,6 +434,9 @@ class AggregationTranslator ( UnaryTranslator ):
         
         #ctxt.codegen.laneActivityProfile ( ctxt )
 
+        # Mark the kernel, if it is a kernel with GROUP BY
+        ctxt.codegen.currentKernel.doGroup = self.algExpr.doGroup
+
         # create aggregation hash table with grouping payload 
         if self.algExpr.doGroup:
             self.payload = Payload ( "apayl" + str ( self.algExpr.opId ), self.algExpr.groupAttributes, ctxt )
@@ -483,7 +486,7 @@ class AggregationTranslator ( UnaryTranslator ):
                 if reduction == Reduction.COUNT:
                     sys.stdout.flush()
                     atomAdd = atomicAdd ( agg, cast ( typ, intConst(1) ) )
-                    atomAddDeviceFunction = atomicAdd ( aggDeviceFunction, cast ( typ, intConst( GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER + str(id) ) ) )   # TODO: replace placeholder in second kernel
+                    atomAddDeviceFunction = atomicAdd ( aggDeviceFunction, cast ( typ, intConst( GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER + str(id) ) ) )
                     if inId in ctxt.attFile.isNullFile:
                         with IfClause ( notLogic ( ctxt.attFile.isNullFile [ inId ] ), ctxt.codegen ):
                             emit ( atomAdd, ctxt.codegen )

@@ -2,7 +2,7 @@ from dogqc.cudalang import *
 from dogqc.code import Code
 import dogqc.identifier as ident
 from enum import IntEnum
-
+import copy
 
 
 class KernelCall ( object ):
@@ -34,7 +34,7 @@ class KernelCall ( object ):
 
     def get ( self ):
         if self.kernel != None:
-            return KernelCall.generic ( self.kernel.kernelName, self.kernel.getParameters(), self.gridSize, self.blockSize )
+            return KernelCall.generic ( self.kernel.kernelName, self.kernel.getParameters(), self.gridSize, self.blockSize, kernel = self.kernel )
         else:
             return KernelCall.generic ( self.kernelName, self.parameters, self.gridSize, self.blockSize )
 
@@ -45,7 +45,7 @@ class KernelCall ( object ):
             return ""
 
 
-    def generic ( kernelName, parameters, gridSize=1024, blockSize=128, templateParams="" ):
+    def generic ( kernelName, parameters, gridSize=1024, blockSize=128, templateParams="", kernel = None ):
         # kernel invocation parameters
         code = Code()
     
@@ -56,17 +56,33 @@ class KernelCall ( object ):
         with Scope ( code ):
             emit ( "int gridsize=" + str(gridSize), code )
             emit ( "int blocksize=" + str(blockSize), code )
-            call = templatedKernel + "<<<gridsize, blocksize>>>("
+            kernel_call = templatedKernel + "<<<gridsize, blocksize>>>("
+
+            # TODO(jigao): when calculate the size, re-check here to calculate the SHARED_MEMORY_USAGE
+            if kernel != None and kernel.doGroup == True:
+                num_bytes = ""
+                for name, c in kernel.inputColumns.items():
+                    if ( str.__contains__( name, "aht" ) or str.__contains__( name, "agg" ) ): # String match the hash aggregations.
+                        dataType = c.dataType.replace( "agg_ht", "agg_ht_sm" )
+                        if num_bytes == "":
+                            num_bytes = sizeof( dataType )
+                        else:
+                            num_bytes = add( num_bytes, sizeof( dataType ) )
+                emit ( assign( declareEasy( CType.INT, SHARED_MEMORY_USAGE ), mul( num_bytes, SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR )), code )
+                emit ( "std::cout << \"Shared memory usage: \" << shared_memory_usage << \" bytes\" << std::endl", code )
+                emit ( call(cudaFuncSetAttribute, [ kernelName, cudaFuncAttributeMaxDynamicSharedMemorySize, SHARED_MEMORY_USAGE] ), code )
+                kernel_call = templatedKernel + "<<<gridsize, blocksize," + SHARED_MEMORY_USAGE + ">>>("
+
             # add parameters: input attributes, output attributes and additional variables (output number)
             comma = False
             for a in parameters:
                 if not comma:
                     comma = True
                 else:
-                    call += ", " 
-                call += str(a)
-            call += ")"
-            emit ( call, code )
+                    kernel_call += ", "
+                kernel_call += str(a)
+            kernel_call += ")"
+            emit ( kernel_call, code )
         return code
 
     
@@ -85,6 +101,7 @@ class Kernel ( object ):
         self.variables = []
         self.kernelName = name
         self.annotations = []
+        self.doGroup = False # if doGroup== True, then generate shared memory stuff inside of kernel as well as <<<,,>>> function call
 
     def add ( self, code ):
         self.body.add( code )

@@ -1,5 +1,8 @@
 SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR = "SHARED_MEMORY_HT_SIZE"
 GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER = "GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER"
+SHARED_MEMORY_USAGE = "shared_memory_usage"
+cudaFuncSetAttribute = "cudaFuncSetAttribute"
+cudaFuncAttributeMaxDynamicSharedMemorySize = "cudaFuncAttributeMaxDynamicSharedMemorySize"
 
 class CType( object ):
     INT = "int"
@@ -253,6 +256,9 @@ def cast ( typename, expr ):
 def declare ( variable ):
     return variable.dataType + " " + variable.name
 
+def declareEasy ( dataType, name ):
+    return dataType + " " + name
+
 def declareSharedArray ( variable, length ):
     return "__shared__ " + variable.dataType + " " + variable.name + "[" + length + "]"
 
@@ -392,7 +398,7 @@ def strcpy ( dest, source ):
     return "strcpy ( " + dest + ", " + source + ")"
 
 def sizeof ( expr ):
-    return "sizeof ( " + str(expr) + ")"
+    return "sizeof (" + str(expr) + ")"
 
 def addressof ( expr ):
     return "&(" + str(expr) + ")"
