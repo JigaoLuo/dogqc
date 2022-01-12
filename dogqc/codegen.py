@@ -22,8 +22,9 @@ class CodeGenerator ( object ):
         self.read = Code()
         self.types = Code()
         self.globalConstant = Code()
-        self.deviceFunction = DeviceFunction("sm_to_gm")
-        self.deviceFunctions = [] # TODO(jigao): multiple functions
+        self.numDeviceFunctions = 0 # TODO(jigao): if multiple functions
+        self.deviceFunctions = [] # TODO(jigao): if multiple functions
+        self.deviceFunction = DeviceFunction("sm_to_gm")  # TODO(jigao): use different ids or names, if multiple functions
         self.kernels = []
         self.currentKernel = None
         self.kernelCalls = []
