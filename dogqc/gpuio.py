@@ -10,11 +10,13 @@ class GpuIO ( object ):
         self.cudaMemcpyIn = Code ()
         self.cudaMemcpyOut = Code ()
         self.cudaFree = Code ()
+        self.initVar_Map = {}
 
     def local ( self, var, init=None ):
         self.declareAllocateHT ( var )
         if init is not None:
             self.initVar ( var, init )
+            self.initVar_Map[var.name] = init
     
     def mapForRead ( self, var, blocked=False ):
         self.declareAllocate ( var )

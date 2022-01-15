@@ -580,11 +580,12 @@ class AggregationTranslator ( UnaryTranslator ):
                 emit ( call ( ctxt.codegen.deviceFunction.functionName, deviceFunctionPara ), ctxt.codegen)
                 emit ( threadfence_block(), ctxt.codegen )
                 # init the shared memory hash tables
+                ctxt.codegen.currentKernel.initVar_Map = ctxt.codegen.gpumem.initVar_Map
                 for name, c in ctxt.codegen.currentKernel.inputColumns.items():
                     if str.__contains__( name, "aht" ) :
                         emit( initSMAggHT(name), ctxt.codegen )
                     elif str.__contains__(name, "agg"):
-                        emit( initSMAggArray(name), ctxt.codegen )
+                        emit( initSMAggArray(name, ctxt.codegen.gpumem.initVar_Map[name]), ctxt.codegen )
                 # re-set the flag
                 with IfClause( equals( threadIdx_x(), intConst(0) ), ctxt.codegen ):
                     emit ( assign( HT_FULL_FLAG, intConst(0) ), ctxt.codegen )

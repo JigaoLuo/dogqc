@@ -104,6 +104,7 @@ class Kernel ( object ):
         self.kernelName = name
         self.annotations = []
         self.doGroup = False # if doGroup== True, then generate shared memory stuff inside of kernel as well as <<<,,>>> function call
+        self.initVar_Map = {}
 
     def add ( self, code ):
         self.body.add( code )
@@ -139,7 +140,7 @@ class Kernel ( object ):
                 if str.__contains__( name, "aht" ) :
                     emit ( initSMAggHT( name ), init_sm )
                 elif str.__contains__( name, "agg" ):
-                    emit ( initSMAggArray( name ), init_sm )
+                    emit ( initSMAggArray( name, self.initVar_Map[name] ), init_sm )
 
         emit( syncthreads(), init_sm )
         self.init.addFront(init_sm)
