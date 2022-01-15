@@ -546,7 +546,7 @@ class AggregationTranslator ( UnaryTranslator ):
             # prepare the parameters of device function sm_to_gm
             assert ctxt.codegen.deviceFunction.inputColumns == {}
             for name, value in ctxt.codegen.currentKernel.inputColumns.items():
-                if value.dataType == "agg_ht" or str.__contains__( name, "agg" ) :
+                if str.__contains__( value.dataType, "agg_ht" ) or str.__contains__( name, "agg" ) :
                     # "agg_ht" could have name as: jht1
                     value_cp = copy.deepcopy(value)
                     ctxt.codegen.deviceFunction.inputColumns[name] = value_cp
@@ -556,7 +556,7 @@ class AggregationTranslator ( UnaryTranslator ):
                     value.dataType = value.dataType.replace("agg_ht", "agg_ht_sm")
             # add global memory agg_ht using copying and duplicating
             for name, value in ctxt.codegen.currentKernel.inputColumns.items():
-                if value.dataType == "agg_ht" or str.__contains__( name, "agg" ) :
+                if str.__contains__( value.dataType, "agg_ht" ) or str.__contains__( name, "agg" ) :
                     global_ht_name = "g_" + name
                     global_ht_col = copy.deepcopy(value)
                     global_ht_col.name = global_ht_name
@@ -574,7 +574,7 @@ class AggregationTranslator ( UnaryTranslator ):
                 emit ( threadfence_block(), ctxt.codegen )
                 # init the shared memory hash tables
                 for name, c in ctxt.codegen.currentKernel.inputColumns.items():
-                    if value.dataType == "agg_ht":
+                    if str.__contains__( c.dataType, "agg_ht" ):
                         emit( initSMAggHT(name), ctxt.codegen )
                     elif str.__contains__(name, "agg"):
                         emit( initSMAggArray(name), ctxt.codegen )

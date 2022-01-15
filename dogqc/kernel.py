@@ -64,7 +64,7 @@ class KernelCall ( object ):
             if kernel != None and kernel.doGroup == True:
                 num_bytes = ""
                 for name, c in kernel.inputColumns.items():
-                    if ( c.dataType == "agg_ht" or str.__contains__( name, "agg" ) ): # String match the hash aggregations.
+                    if ( str.__contains__( c.dataType, "agg_ht" ) or str.__contains__( name, "agg" ) ): # String match the hash aggregations.
                         dataType = c.dataType.replace( "agg_ht", "agg_ht_sm" )
                         if num_bytes == "":
                             num_bytes = sizeof( dataType )
@@ -131,12 +131,12 @@ class Kernel ( object ):
 
         offset = SHARED_MEMORY
         for name, c in self.inputColumns.items():
-            if self.doGroup and ( c.dataType == "agg_ht" or str.__contains__( name, "agg" ) ):
+            if self.doGroup and ( str.__contains__( c.dataType, "agg_ht" ) or str.__contains__( name, "agg" ) ):
                 dataType = c.dataType.replace("agg_ht", "agg_ht_sm")
                 emit ( declareEasy( ptr( dataType ), name), init_sm )
                 emit ( assign( name, cast( ptr( dataType ), offset ) ), init_sm )
                 offset = add ( offset, mul ( sizeof( dataType ) , SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR ) )
-                if c.dataType == "agg_ht":
+                if str.__contains__( c.dataType, "agg_ht" ):
                     emit ( initSMAggHT( name ), init_sm )
                 elif str.__contains__( name, "agg" ):
                     emit ( initSMAggArray( name ), init_sm )
@@ -157,7 +157,7 @@ class Kernel ( object ):
             else:
                 params += ", "
             assert c.get() == name
-            if self.doGroup and ( c.dataType == "agg_ht" or str.__contains__( name, "agg" ) ):
+            if self.doGroup and ( str.__contains__( c.dataType, "agg_ht" ) or str.__contains__( name, "agg" ) ):
                 params += c.dataType + "* g_" + c.get() # Use prefix "g_" as global ht
             else:
                 params += c.dataType + "* " + c.get()
