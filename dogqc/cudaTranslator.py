@@ -546,7 +546,8 @@ class AggregationTranslator ( UnaryTranslator ):
             # prepare the parameters of device function sm_to_gm
             assert ctxt.codegen.deviceFunction.inputColumns == {}
             for name, value in ctxt.codegen.currentKernel.inputColumns.items():
-                if str.__contains__( name, "aht" ) or str.__contains__( name, "agg" ) :
+                if value.dataType == "agg_ht" or str.__contains__( name, "agg" ) :
+                    # "agg_ht" could have name as: jht1
                     value_cp = copy.deepcopy(value)
                     ctxt.codegen.deviceFunction.inputColumns[name] = value_cp
             # shared memory agg_ht_sm instead of agg_ht
@@ -555,7 +556,7 @@ class AggregationTranslator ( UnaryTranslator ):
                     value.dataType = value.dataType.replace("agg_ht", "agg_ht_sm")
             # add global memory agg_ht using copying and duplicating
             for name, value in ctxt.codegen.currentKernel.inputColumns.items():
-                if str.__contains__( name, "aht" ) or str.__contains__( name, "agg" ) :
+                if value.dataType == "agg_ht" or str.__contains__( name, "agg" ) :
                     global_ht_name = "g_" + name
                     global_ht_col = copy.deepcopy(value)
                     global_ht_col.name = global_ht_name
@@ -573,7 +574,7 @@ class AggregationTranslator ( UnaryTranslator ):
                 emit ( threadfence_block(), ctxt.codegen )
                 # init the shared memory hash tables
                 for name, c in ctxt.codegen.currentKernel.inputColumns.items():
-                    if str.__contains__(name, "aht"):
+                    if value.dataType == "agg_ht":
                         emit( initSMAggHT(name), ctxt.codegen )
                     elif str.__contains__(name, "agg"):
                         emit( initSMAggArray(name), ctxt.codegen )
@@ -592,7 +593,7 @@ class AggregationTranslator ( UnaryTranslator ):
 
 
         ## device function sm_to_gm: generate the first half of the kernel 2
-        assert ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.END or ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.INIT
+        assert ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.END or ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.INIT # TODO(jigao): rethink it
         with ScanLoop ( ctxt.vars.scanTid, ScanType.KERNEL, False, htmem.getTable ( self.algExpr.opId ), dict(), self.algExpr, ctxt ):
             commentOperator ("scan aggregation ht", self.algExpr.opId, ctxt.codegen)
             htmem.addToKernel ( ctxt.codegen.currentKernel )
@@ -610,7 +611,7 @@ class AggregationTranslator ( UnaryTranslator ):
                     count = self.algExpr.countAttr
                     type = ctxt.codegen.langType ( att.dataType )
                     emit ( assign ( ctxt.attFile.access ( att ), div ( ctxt.attFile.access ( att ), 
-                        cast ( type, ctxt.attFile.access ( count ) ) ) ), ctxt.codegen )
+                        cast ( type, ctxt.attFile.access ( count ) ) ) ), ctxt.codegen ) # This div (pre-aggregation) should not be in the sm_to_gm.
 
             ## Bulk-add the device function sm_to_gm.
             if ctxt.codegen.deviceFunction.status == DeviceFunctionStatus.END:
@@ -620,6 +621,7 @@ class AggregationTranslator ( UnaryTranslator ):
                 kernel_body.content = re.sub(r"unsigned loopVar.*;", "unsigned loopVar = threadIdx.x;", kernel_body.content)
                 kernel_body.content = re.sub(r"unsigned step.*;", "unsigned step = blockDim.x;", kernel_body.content)
                 kernel_body.content = re.sub(r"loopVar < \d*", "loopVar < " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR, kernel_body.content)
+                kernel_body.content = re.sub(r".*=.*/.*;", "", kernel_body.content) # The above div (pre-aggregation) should not be in the sm_to_gm.
                 for id, a in htmem.aggAtts.items():
                     group_attribute_name = ident.att(a)
                     ctxt.codegen.deviceFunction.body.content = re.sub(GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER + str(id), str(group_attribute_name), ctxt.codegen.deviceFunction.body.content)
