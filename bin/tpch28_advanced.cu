@@ -4,6 +4,8 @@
 /// order by l_suppkey
 #include <map>
 #include <cassert>
+#include <cooperative_groups.h>
+namespace cg = cooperative_groups;
 //#define COLLISION_PRINT
 
 #include <list>
@@ -152,9 +154,21 @@ __global__ void krnl_lineitem1(
             atomicAdd(&num_collision, numLookups - 1);
 #endif
         }
+
+        cg::thread_block cta = cg::this_thread_block();
+        cg::thread_block_tile<32> tile32 = cg::tiled_partition<32>(cta);
+        unsigned int group_mask_cg = tile32.match_any(bucket);
         if(active && bucket != -1) {  ////
-            atomicAdd(&(agg1[bucket]), ((int)1));
+            cooperative_groups::coalesced_group g = cooperative_groups::coalesced_threads();
+            cooperative_groups::coalesced_group subtile = cooperative_groups::labeled_partition(g, group_mask_cg);
+            if (subtile.thread_rank() == 0 /*leader lane*/) {
+                atomicAdd(&(agg1[bucket]), ((int) subtile.size()));
+            }
         }
+
+//        if(active && bucket != -1) {  ////
+//            atomicAdd(&(agg1[bucket]), ((int)1));
+//        }
 
         /// Implication and Disjunction: P->Q <=>  ^P OR Q
         /// bucket==-1 -> HT_FULL_FLAG!=0
