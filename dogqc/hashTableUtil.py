@@ -48,11 +48,6 @@ class Payload ( object ):
         self.attributes = attributes
         self.vars = dict()
 
-        # hash table's size
-        if not ctxt.codegen.globalConstant.hasCode:
-            shared_memory_ht_size = 1024 # TODO(jigao): calculate this.
-            Variable.val ("constexpr " + CType.INT, SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR, ctxt.codegen.globalConstant, intConst(shared_memory_ht_size))
-
         # hash table's element struct
         with StructClause ( self.typeName, ctxt.codegen.types ):
             for id, a in attributes.items():

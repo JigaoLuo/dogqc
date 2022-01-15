@@ -474,10 +474,18 @@ class AggregationTranslator ( UnaryTranslator ):
 
                 # shared memory ht logic: if full, then bucket=-1 and start to copy out to the global memory ht.
                 with WhileLoop( notLogic( bucketFound ), ctxt.codegen ) as loop:
+                    # Declare hash table's size: SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR
+                    if not ctxt.codegen.globalConstant.hasCode:
+                        shared_memory_ht_size = 512 # TODO(jigao): calculate this. Can use the estimate size.
+                        if shared_memory_ht_size > htmem.numEntries / 10:
+                            shared_memory_ht_size = htmem.numEntries / 10
+                            # TODO(jigao): if too large > 48KiB
+                        Variable.val( "constexpr " + CType.INT, SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR, ctxt.codegen.globalConstant, intConst( shared_memory_ht_size ) )
+
                     emit ( assign ( bucketVar, call ( qlib.Fct.HASH_AGG_BUCKET,
                         [ htmem.ht,            SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR, hashVar, numLookups, addressof ( payl ) ] ) ), ctxt.codegen )
                     emit( assign(bucketVar, call(qlib.Fct.HASH_AGG_BUCKET,
-                        ["g_" + htmem.ht.name, htmem.numEntries,                    hashVar, numLookups, addressof(payl)])), ctxt.codegen.deviceFunction ) # Use prefix "g_" as global ht
+                        ["g_" + htmem.ht.name, htmem.numEntries,                    hashVar, numLookups, addressof ( payl ) ] ) ), ctxt.codegen.deviceFunction ) # Use prefix "g_" as global ht
 
                     with IfClause( notEquals( bucketVar, intConst(-1) ), ctxt.codegen):
                         # verify grouping attributes from bucket
