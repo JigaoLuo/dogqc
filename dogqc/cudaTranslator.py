@@ -477,8 +477,8 @@ class AggregationTranslator ( UnaryTranslator ):
                     # Declare hash table's size: SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR
                     if not ctxt.codegen.globalConstant.hasCode:
                         shared_memory_ht_size = 512 # TODO(jigao): calculate this. Can use the estimate size.
-                        if shared_memory_ht_size > htmem.numEntries / 10:
-                            shared_memory_ht_size = htmem.numEntries / 10
+                        if shared_memory_ht_size > htmem.numEntries:
+                            shared_memory_ht_size = htmem.numEntries
                             # TODO(jigao): if too large > 48KiB
                         Variable.val( "constexpr " + CType.INT, SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR, ctxt.codegen.globalConstant, intConst( shared_memory_ht_size ) )
 
