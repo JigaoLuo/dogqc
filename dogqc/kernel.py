@@ -70,7 +70,7 @@ class KernelCall ( object ):
                             num_bytes = sizeof( dataType )
                         else:
                             num_bytes = add( num_bytes, sizeof( dataType ) )
-                emit ( assign( declareEasy( CType.INT, SHARED_MEMORY_USAGE ), mul( num_bytes, SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR )), code )
+                emit ( assign( declareEasy( CType.INT, SHARED_MEMORY_USAGE ), mul( num_bytes, SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + kernel.deviceFunctionId )), code )
                 emit ( cout() + " << \"Shared memory usage: \" << " + SHARED_MEMORY_USAGE + " << \" bytes\" << std::endl" , code )
                 emit ( call(cudaFuncSetAttribute, [ kernelName, cudaFuncAttributeMaxDynamicSharedMemorySize, SHARED_MEMORY_USAGE] ), code )
                 kernel_call = templatedKernel + "<<<gridsize, blocksize," + SHARED_MEMORY_USAGE + ">>>("
@@ -105,6 +105,7 @@ class Kernel ( object ):
         self.annotations = []
         self.doGroup = False # if doGroup== True, then generate shared memory stuff inside of kernel as well as <<<,,>>> function call
         self.initVar_Map = {}
+        self.deviceFunctionId = None
 
     def add ( self, code ):
         self.body.add( code )
@@ -136,11 +137,11 @@ class Kernel ( object ):
                 dataType = c.dataType.replace("agg_ht", "agg_ht_sm")
                 emit ( declareEasy( ptr( dataType ), name), init_sm )
                 emit ( assign( name, cast( ptr( dataType ), offset ) ), init_sm )
-                offset = add ( offset, mul ( sizeof( dataType ) , SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR ) )
+                offset = add ( offset, mul ( sizeof( dataType ) , SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + self.deviceFunctionId ) )
                 if str.__contains__( name, "aht" ) :
-                    emit ( initSMAggHT( name ), init_sm )
+                    emit ( initSMAggHT( name, self.deviceFunctionId ), init_sm )
                 elif str.__contains__( name, "agg" ):
-                    emit ( initSMAggArray( name, self.initVar_Map[name] ), init_sm )
+                    emit ( initSMAggArray( name, self.deviceFunctionId, self.initVar_Map[name] ), init_sm )
 
         emit( syncthreads(), init_sm )
         self.init.addFront(init_sm)
@@ -202,6 +203,7 @@ class DeviceFunction(object):
         # self.outputAttributes = []
         # self.variables = []
         self.functionName = name
+        self.id = self.functionName[-1]
         # self.annotations = []
 
     def add(self, code):

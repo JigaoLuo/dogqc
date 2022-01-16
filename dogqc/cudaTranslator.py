@@ -459,6 +459,7 @@ class AggregationTranslator ( UnaryTranslator ):
         if self.algExpr.doGroup:
             assert ctxt.codegen.currentDeviceFunction.status == DeviceFunctionStatus.INIT
             ctxt.codegen.currentDeviceFunction.status = DeviceFunctionStatus.STARTED
+            ctxt.codegen.currentKernel.deviceFunctionId = ctxt.codegen.currentDeviceFunction.id
 
         # find bucket
         bucketVar = Variable.val ( CType.INT, "bucket", ctxt.codegen, intConst(0) )
@@ -475,17 +476,17 @@ class AggregationTranslator ( UnaryTranslator ):
                 # shared memory ht logic: if full, then bucket=-1 and start to copy out to the global memory ht.
                 with WhileLoop( notLogic( bucketFound ), ctxt.codegen ) as loop:
                     # Declare hash table's size: SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR
-                    if not ctxt.codegen.globalConstant.hasCode:
-                        shared_memory_ht_size = 512 # TODO(jigao): calculate this. Can use the estimate size.
-                        if shared_memory_ht_size > htmem.numEntries:
-                            shared_memory_ht_size = htmem.numEntries
-                            # TODO(jigao): if too large > 48KiB
-                        Variable.val( "constexpr " + CType.INT, SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR, ctxt.codegen.globalConstant, intConst( shared_memory_ht_size ) )
+                    shared_memory_ht_size = 512 # TODO(jigao): calculate this. Can use the estimate size.
+                    if shared_memory_ht_size > htmem.numEntries:
+                        shared_memory_ht_size = htmem.numEntries
+                        # TODO(jigao): if too large > 48KiB
+                    SM_HT_SIZE = SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + ctxt.codegen.currentDeviceFunction.id
+                    Variable.val( "constexpr " + CType.INT, SM_HT_SIZE, ctxt.codegen.globalConstant, intConst( shared_memory_ht_size ) )
 
                     emit ( assign ( bucketVar, call ( qlib.Fct.HASH_AGG_BUCKET,
-                        [ htmem.ht,            SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR, hashVar, numLookups, addressof ( payl ) ] ) ), ctxt.codegen )
+                        [ htmem.ht,            SM_HT_SIZE,       hashVar, numLookups, addressof ( payl ) ] ) ), ctxt.codegen )
                     emit( assign(bucketVar, call(qlib.Fct.HASH_AGG_BUCKET,
-                        ["g_" + htmem.ht.name, htmem.numEntries,                    hashVar, numLookups, addressof ( payl ) ] ) ), ctxt.codegen.currentDeviceFunction ) # Use prefix "g_" as global ht
+                        ["g_" + htmem.ht.name, htmem.numEntries, hashVar, numLookups, addressof ( payl ) ] ) ), ctxt.codegen.currentDeviceFunction ) # Use prefix "g_" as global ht
 
                     with IfClause( notEquals( bucketVar, intConst(-1) ), ctxt.codegen):
                         # verify grouping attributes from bucket
@@ -583,9 +584,9 @@ class AggregationTranslator ( UnaryTranslator ):
                 ctxt.codegen.currentKernel.initVar_Map = ctxt.codegen.gpumem.initVar_Map
                 for name, c in ctxt.codegen.currentKernel.inputColumns.items():
                     if str.__contains__( name, "aht" ) :
-                        emit( initSMAggHT(name), ctxt.codegen )
+                        emit( initSMAggHT(name, ctxt.codegen.currentDeviceFunction.id ), ctxt.codegen )
                     elif str.__contains__(name, "agg"):
-                        emit( initSMAggArray(name, ctxt.codegen.gpumem.initVar_Map[name]), ctxt.codegen )
+                        emit( initSMAggArray(name, ctxt.codegen.currentDeviceFunction.id, ctxt.codegen.gpumem.initVar_Map[name]), ctxt.codegen )
                 # re-set the flag
                 with IfClause( equals( threadIdx_x(), intConst(0) ), ctxt.codegen ):
                     emit ( assign( HT_FULL_FLAG, intConst(0) ), ctxt.codegen )
@@ -629,7 +630,7 @@ class AggregationTranslator ( UnaryTranslator ):
                 kernel_body = copy.deepcopy(ctxt.codegen.currentKernel.body)
                 kernel_body.content = re.sub(r"unsigned loopVar.*;", "unsigned loopVar = threadIdx.x;", kernel_body.content)
                 kernel_body.content = re.sub(r"unsigned step.*;", "unsigned step = blockDim.x;", kernel_body.content)
-                kernel_body.content = re.sub(r"loopVar < \d*", "loopVar < " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR, kernel_body.content)
+                kernel_body.content = re.sub(r"loopVar < \d*", "loopVar < " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR  + ctxt.codegen.currentDeviceFunction.id, kernel_body.content)
                 kernel_body.content = re.sub(r".*=.*/.*;", "", kernel_body.content) # The above div (pre-aggregation) should not be in the sm_to_gm.
                 for id, a in htmem.aggAtts.items():
                     group_attribute_name = ident.att(a)

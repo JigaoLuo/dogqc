@@ -441,14 +441,14 @@ def clzIntr ( expr ):
 def ffsIntr ( expr ):
     return "__ffs(" + str(expr) + ")"
 
-def initSMAggHT ( expr ):
-    return "initSMAggHT(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + ")"
+def initSMAggHT ( expr, id ):
+    return "initSMAggHT(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + id + ")"
 
-def initSMAggArray ( expr, value = None ):
+def initSMAggArray ( expr, id, value = None ):
     if value == None:
-        return "initSMAggArray(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + ")"
+        return "initSMAggArray(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + id + ")"
     else:
-        return "initSMAggArray(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + "," + str(value) + ")"
+        return "initSMAggArray(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + id + "," + str(value) + ")"
 
 def assertion ( expr ):
     return "assert(" + str(expr) + ")"
