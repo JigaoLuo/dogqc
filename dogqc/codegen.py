@@ -22,9 +22,8 @@ class CodeGenerator ( object ):
         self.read = Code()
         self.types = Code()
         self.globalConstant = Code()
-        self.numDeviceFunctions = 0 # TODO(jigao): if multiple functions
-        self.deviceFunctions = [] # TODO(jigao): if multiple functions
-        self.deviceFunction = DeviceFunction("sm_to_gm")  # TODO(jigao): use different ids or names, if multiple functions
+        self.deviceFunctions = []
+        self.currentDeviceFunction = DeviceFunction("sm_to_gm" + str( len ( self.deviceFunctions ) ) ) # the current building deviceFunction
         self.kernels = []
         self.currentKernel = None
         self.kernelCalls = []
@@ -134,8 +133,8 @@ class CodeGenerator ( object ):
             code.add ( qlib.getCudaIncludes () )
         code.addFragment ( self.types )
         code.addFragment ( self.globalConstant )
-        if self.deviceFunction.body.hasCode:
-            code.add ( self.deviceFunction.getDeviceFunction() )
+        for d in self.deviceFunctions:
+            code.add ( d.getDeviceFunction() )
         for k in self.kernels: 
             code.add(k.getKernelCode())
         code.add( "int main() {" )

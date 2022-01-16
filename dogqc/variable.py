@@ -23,12 +23,12 @@ class Variable ( object ):
         v.ishostvalue = True
         if codegen is not None and init is None:
             v.declare ( codegen )
-            if generate_deviceFunction and hasattr(codegen, 'deviceFunction') and codegen.deviceFunction.status == DeviceFunctionStatus.STARTED and init is None:
-                v.declare( codegen.deviceFunction )
+            if generate_deviceFunction and hasattr(codegen, 'currentDeviceFunction') and codegen.currentDeviceFunction.status == DeviceFunctionStatus.STARTED and init is None:
+                v.declare( codegen.currentDeviceFunction )
         if codegen is not None and init is not None:
             v.declareAssign ( init, codegen )
-            if generate_deviceFunction and  hasattr(codegen, 'deviceFunction') and codegen.deviceFunction.status == DeviceFunctionStatus.STARTED and init is not None:
-                v.declareAssign( init, codegen.deviceFunction )
+            if generate_deviceFunction and  hasattr(codegen, 'currentDeviceFunction') and codegen.currentDeviceFunction.status == DeviceFunctionStatus.STARTED and init is not None:
+                v.declareAssign( init, codegen.currentDeviceFunction )
         return v
     
     @staticmethod

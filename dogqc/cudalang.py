@@ -144,8 +144,8 @@ class WhileLoop ( object ):
     def __init__( self, condition, code ):
         self.code = code
         code.add ( "while(" + str ( condition ) + ") {")
-        if hasattr(self.code, 'deviceFunction') and self.code.deviceFunction.status == 2: # 2 for STARTED
-            self.code.deviceFunction.add("while(" + str(condition) + ") {")
+        if hasattr(self.code, 'currentDeviceFunction') and self.code.currentDeviceFunction.status == 2: # 2 for STARTED
+            self.code.currentDeviceFunction.add("while(" + str(condition) + ") {")
 
     def __enter__ ( self ):
         return self
@@ -155,13 +155,13 @@ class WhileLoop ( object ):
     
     def break_ ( self ):
         self.code.add ( "break;" )
-        if hasattr(self.code, 'deviceFunction') and self.code.deviceFunction.status == 2: # 2 for STARTED
-            self.code.deviceFunction.add("break;")
+        if hasattr(self.code, 'currentDeviceFunction') and self.code.currentDeviceFunction.status == 2: # 2 for STARTED
+            self.code.currentDeviceFunction.add("break;")
 
     def close ( self ):
         self.code.add ( "}" )
-        if hasattr(self.code, 'deviceFunction') and self.code.deviceFunction.status == 2: # 2 for STARTED
-            self.code.deviceFunction.add("}")
+        if hasattr(self.code, 'currentDeviceFunction') and self.code.currentDeviceFunction.status == 2: # 2 for STARTED
+            self.code.currentDeviceFunction.add("}")
 
 class ForLoop ( object ):
 
@@ -204,8 +204,8 @@ class IfClause ( object ):
     def __init__( self, condition, code ):
         self.code = code
         code.add ( "if(" + str(condition) + ") {")
-        if hasattr(self.code, 'deviceFunction') and self.code.deviceFunction.status == 2: # 2 for STARTED
-            self.code.deviceFunction.add("if(" + str(condition) + ") {")
+        if hasattr(self.code, 'currentDeviceFunction') and self.code.currentDeviceFunction.status == 2: # 2 for STARTED
+            self.code.currentDeviceFunction.add("if(" + str(condition) + ") {")
 
     def __enter__ ( self ): 
         return self
@@ -215,8 +215,8 @@ class IfClause ( object ):
 
     def close ( self ):
         self.code.add ( "}" )
-        if hasattr(self.code, 'deviceFunction') and self.code.deviceFunction.status == 2: # 2 for STARTED
-            self.code.deviceFunction.add("}")
+        if hasattr(self.code, 'currentDeviceFunction') and self.code.currentDeviceFunction.status == 2: # 2 for STARTED
+            self.code.currentDeviceFunction.add("}")
 
 class ElseIfClause ( object ):
  
