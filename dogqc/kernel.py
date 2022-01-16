@@ -64,6 +64,9 @@ class KernelCall ( object ):
             if kernel != None and kernel.doGroup == True:
                 num_bytes = ""
                 for name, c in kernel.inputColumns.items():
+                    # Only take the last aht and coming agg
+                    if str.__contains__( name, "aht" ):
+                        num_bytes = ""
                     if ( str.__contains__( name, "aht" ) or str.__contains__( name, "agg" ) ): # String match the hash aggregations.
                         dataType = c.dataType.replace( "agg_ht", "agg_ht_sm" )
                         if num_bytes == "":
@@ -127,13 +130,14 @@ class Kernel ( object ):
     def initSM(self):
         assert self.doGroup
         init_sm = Code()
-        emit ( declareVolatileSharedEasy( CType.INT, HT_FULL_FLAG), init_sm )
-        emit ( assign( HT_FULL_FLAG, intConst(0) ), init_sm )
-        emit ( declareexternSharedArrayEasy( CType.CHAR, SHARED_MEMORY ), init_sm )
 
         offset = SHARED_MEMORY
         for name, c in self.inputColumns.items():
             if self.doGroup and ( str.__contains__( name, "aht" )  or str.__contains__( name, "agg" ) ):
+                if str.__contains__( name, "aht" ):
+                    # Only take the last aht and coming agg
+                    init_sm = Code()
+                    emit(declareexternSharedArrayEasy(CType.CHAR, SHARED_MEMORY), init_sm)
                 dataType = c.dataType.replace("agg_ht", "agg_ht_sm")
                 emit ( declareEasy( ptr( dataType ), name), init_sm )
                 emit ( assign( name, cast( ptr( dataType ), offset ) ), init_sm )
@@ -142,6 +146,9 @@ class Kernel ( object ):
                     emit ( initSMAggHT( name, self.deviceFunctionId ), init_sm )
                 elif str.__contains__( name, "agg" ):
                     emit ( initSMAggArray( name, self.deviceFunctionId, self.initVar_Map[name] ), init_sm )
+
+        emit ( declareVolatileSharedEasy( CType.INT, HT_FULL_FLAG), init_sm )
+        emit ( assign( HT_FULL_FLAG, intConst(0) ), init_sm )
 
         emit( syncthreads(), init_sm )
         self.init.addFront(init_sm)
@@ -160,6 +167,9 @@ class Kernel ( object ):
                 params += ", "
             assert c.get() == name
             if self.doGroup and ( str.__contains__( name, "aht" )  or str.__contains__( name, "agg" ) ):
+                if str.__contains__( name, "aht" ) :
+                    params = params.replace("g_aht", "aht")
+                    params = params.replace("g_agg", "agg")
                 params += c.dataType + "* g_" + c.get() # Use prefix "g_" as global ht
             else:
                 params += c.dataType + "* " + c.get()

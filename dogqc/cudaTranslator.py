@@ -555,7 +555,10 @@ class AggregationTranslator ( UnaryTranslator ):
             # prepare the parameters of device function sm_to_gm
             assert ctxt.codegen.currentDeviceFunction.inputColumns == {}
             for name, value in ctxt.codegen.currentKernel.inputColumns.items():
-                if str.__contains__( name, "aht" )  or str.__contains__( name, "agg" ) :
+                # Only take the last aht and coming agg
+                if str.__contains__(name, "aht"):
+                    ctxt.codegen.currentDeviceFunction.inputColumns = {}
+                if str.__contains__( name, "aht" ) or str.__contains__( name, "agg" ) :
                     value_cp = copy.deepcopy(value)
                     ctxt.codegen.currentDeviceFunction.inputColumns[name] = value_cp
             # shared memory agg_ht_sm instead of agg_ht
@@ -563,11 +566,14 @@ class AggregationTranslator ( UnaryTranslator ):
                 if "agg_ht" in value.dataType:
                     value.dataType = value.dataType.replace("agg_ht", "agg_ht_sm")
             # add global memory agg_ht using copying and duplicating
-            for name, value in ctxt.codegen.currentKernel.inputColumns.items():
+            shared_memory_data_structure = copy.deepcopy( ctxt.codegen.currentDeviceFunction.inputColumns )
+            for name, value in shared_memory_data_structure.items():
                 if str.__contains__( name, "aht" ) or str.__contains__( name, "agg" ) :
                     global_ht_name = "g_" + name
                     global_ht_col = copy.deepcopy(value)
                     global_ht_col.name = global_ht_name
+                    if "agg_ht_sm" in global_ht_col.dataType:
+                        global_ht_col.dataType = global_ht_col.dataType.replace("agg_ht_sm", "agg_ht")
                     ctxt.codegen.currentDeviceFunction.inputColumns[global_ht_name] = global_ht_col
 
             ## Finish the kernel
@@ -582,7 +588,7 @@ class AggregationTranslator ( UnaryTranslator ):
                 emit ( threadfence_block(), ctxt.codegen )
                 # init the shared memory hash tables
                 ctxt.codegen.currentKernel.initVar_Map = ctxt.codegen.gpumem.initVar_Map
-                for name, c in ctxt.codegen.currentKernel.inputColumns.items():
+                for name, c in shared_memory_data_structure.items():
                     if str.__contains__( name, "aht" ) :
                         emit( initSMAggHT(name, ctxt.codegen.currentDeviceFunction.id ), ctxt.codegen )
                     elif str.__contains__(name, "agg"):
