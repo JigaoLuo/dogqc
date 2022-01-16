@@ -137,6 +137,7 @@ class Kernel ( object ):
                 if str.__contains__( name, "aht" ):
                     # Only take the last aht and coming agg
                     init_sm = Code()
+                    offset = SHARED_MEMORY
                     emit(declareexternSharedArrayEasy(CType.CHAR, SHARED_MEMORY), init_sm)
                 dataType = c.dataType.replace("agg_ht", "agg_ht_sm")
                 emit ( declareEasy( ptr( dataType ), name), init_sm )
