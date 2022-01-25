@@ -29,8 +29,8 @@ __device__ bool operator==(const apayl2& lhs, const apayl2& rhs) {
 }
 
 constexpr int SHARED_MEMORY_HT_SIZE = 1024;  /// In shared memory
-constexpr int LINEITEM_SIZE = 6001215;       /// SF1
-//constexpr int LINEITEM_SIZE = 59986052;      /// SF10, change the folder name to sf10
+constexpr int LINEITEM_SIZE = 6001215; const std::string file_path = "mmdb/tpch-dbgen-sf1/lineitem_l_suppkey";      /// SF1
+//constexpr int LINEITEM_SIZE = 59986052;  const std::string file_path = "mmdb/tpch-dbgen-sf10/lineitem_l_suppkey";     /// SF10
 constexpr int GLOBAL_HT_SIZE = LINEITEM_SIZE * 2;  /// In global memory
 //constexpr int GLOBAL_HT_SIZE = 65536;  /// In global memory
 
@@ -249,7 +249,7 @@ __global__ void krnl_aggregation2(
 
 int main() {
     int* iatt4_lsuppkey;
-    iatt4_lsuppkey = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_suppkey" );
+    iatt4_lsuppkey = ( int*) map_memory_file ( file_path.c_str() );
 
     int nout_result;
     std::vector < int > oatt4_lsuppkey(LINEITEM_SIZE);
