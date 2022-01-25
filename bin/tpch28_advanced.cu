@@ -4,8 +4,9 @@
 /// order by l_suppkey
 #include <map>
 #include <cassert>
+#include <cooperative_groups.h>
+namespace cg = cooperative_groups;
 //#define COLLISION_PRINT
-//#define HT_CHECKER
 
 #include <list>
 #include <unordered_map>
@@ -33,68 +34,67 @@ constexpr int LINEITEM_SIZE = 6001215;       /// SF1
 constexpr int GLOBAL_HT_SIZE = LINEITEM_SIZE * 2;  /// In global memory
 //constexpr int GLOBAL_HT_SIZE = 65536;  /// In global memory
 
-__device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, int* agg1, int SHARED_MEMORY_HT_SIZE, agg_ht<apayl2>* g_aht2, int* g_agg1) {
+__device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, int* agg1, agg_ht<apayl2>* g_aht2, int* g_agg1) {
     /// Copy the shared memory hash table (pre-aggreagation) into the global hash table.
-    {
-        /// <-- START: first half of the kernel 2
-        int att4_lsuppkey;
-        int att1_countlsu;
-        int tid_aggregation2 = 0;
-        unsigned loopVar = threadIdx.x;  ///
-        unsigned step = blockDim.x;  ///
-        unsigned flushPipeline = 0;
-        int active = 0;
-        while(!(flushPipeline)) {
-            tid_aggregation2 = loopVar;
-            active = (loopVar < SHARED_MEMORY_HT_SIZE);  ///
-            // flush pipeline if no new elements
-            flushPipeline = !(__ballot_sync(ALL_LANES,active));
-            if(active) {
-            }
-            // -------- scan aggregation ht (opId: 2) --------
-            if(active) {
-                active &= ((aht2[tid_aggregation2].lock.lock == OnceLock::LOCK_DONE));
-            }
-            if(active) {
-                apayl2 payl = aht2[tid_aggregation2].payload;
-                att4_lsuppkey = payl.att4_lsuppkey;
-            }
-            if(active) {
-                att1_countlsu = agg1[tid_aggregation2];
-            }
-            /// <-- END: first half of the kernel 2
-
-            /// <-- START: second half of the kernel 1
-            /// Insert to global hash table.
-            int bucket = 0;
-            if(active) {
-                uint64_t hash2 = 0;
-                hash2 = 0;
-                if(active) {
-                    hash2 = hash ( (hash2 + ((uint64_t)att4_lsuppkey)));
-                }
-                apayl2 payl;
-                payl.att4_lsuppkey = att4_lsuppkey;
-                int bucketFound = 0;
-                int numLookups = 0;
-                while(!(bucketFound)) {
-                    bucket = hashAggregateGetBucket ( g_aht2, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
-                    apayl2 probepayl = g_aht2[bucket].payload;  ////
-                    bucketFound = 1;
-                    bucketFound &= ((payl.att4_lsuppkey == probepayl.att4_lsuppkey));
-                }
-            }
-            if(active) {
-                atomicAdd(&(g_agg1[bucket]), ((int)att1_countlsu));  ////
-            }
-            /// <-- END: second half of the kernel 1
-            loopVar += step;
+    /// <-- START: first half of the kernel 2
+    int att4_lsuppkey;
+    int att1_countlsu;
+    int tid_aggregation2 = 0;
+    unsigned loopVar = threadIdx.x;  ///
+    unsigned step = blockDim.x;  ///
+    unsigned flushPipeline = 0;
+    int active = 0;
+    while(!(flushPipeline)) {
+        tid_aggregation2 = loopVar;
+        active = (loopVar < SHARED_MEMORY_HT_SIZE);  ///
+        // flush pipeline if no new elements
+        flushPipeline = !(__ballot_sync(ALL_LANES,active));
+        if(active) {
         }
+        // -------- scan aggregation ht (opId: 2) --------
+        if(active) {
+            active &= ((aht2[tid_aggregation2].lock.lock == OnceLock::LOCK_DONE));
+        }
+        if(active) {
+            apayl2 payl = aht2[tid_aggregation2].payload;
+            att4_lsuppkey = payl.att4_lsuppkey;
+        }
+        if(active) {
+            att1_countlsu = agg1[tid_aggregation2];
+        }
+        /// <-- END: first half of the kernel 2
+
+        /// <-- START: second half of the kernel 1
+        /// Insert to global hash table.
+        int bucket = 0;
+        if(active) {
+            uint64_t hash2 = 0;
+            hash2 = 0;
+            if(active) {
+                hash2 = hash ( (hash2 + ((uint64_t)att4_lsuppkey)));
+            }
+            apayl2 payl;
+            payl.att4_lsuppkey = att4_lsuppkey;
+            int bucketFound = 0;
+            int numLookups = 0;
+            while(!(bucketFound)) {
+                bucket = hashAggregateGetBucket ( g_aht2, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
+                apayl2 probepayl = g_aht2[bucket].payload;  ////
+                bucketFound = 1;
+                bucketFound &= ((payl.att4_lsuppkey == probepayl.att4_lsuppkey));
+            }
+        }
+        if(active) {
+            atomicAdd(&(g_agg1[bucket]), ((int)att1_countlsu));  ////
+        }
+        /// <-- END: second half of the kernel 1
+        loopVar += step;
     }
+
 }
 
 __global__ void krnl_lineitem1(
-    int* iatt4_lsuppkey, int* nout_result, int* oatt4_lsuppkey, int* oatt1_countlsu, agg_ht<apayl2>* g_aht2, int* g_agg1) {  ///
+    int* iatt4_lsuppkey, agg_ht<apayl2>* g_aht2, int* g_agg1) {
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
     extern __shared__ char shared_memory[];
@@ -109,76 +109,82 @@ __global__ void krnl_lineitem1(
     initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
     __syncthreads();
 
-    {
-        /// The first old kenrel
-        int att4_lsuppkey;
+    /// The first old kenrel
+    int att4_lsuppkey;
 
-        int tid_lineitem1 = 0;
-        unsigned loopVar__ = ((blockIdx.x * blockDim.x) + threadIdx.x);  ////
-//        unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);
-        unsigned step = (blockDim.x * gridDim.x);
-        unsigned flushPipeline__ = 0;  ////
-//        unsigned flushPipeline = 0;
-        int active = 0;
-//        while(!(flushPipeline)) {
-        while(!(flushPipeline__)) {
-            tid_lineitem1 = loopVar__;
-            active = (loopVar__ < LINEITEM_SIZE);
-            // flush pipeline if no new elements
-            flushPipeline__ = !(__ballot_sync(ALL_LANES,active));
-            if(active) {
-                att4_lsuppkey = iatt4_lsuppkey[tid_lineitem1];
-            }
-            // -------- aggregation (opId: 2) --------
-            int bucket = 0;
-            if(active) {
-                uint64_t hash2 = 0;
-                hash2 = 0;
-                if(active) {
-                    hash2 = hash ( (hash2 + ((uint64_t)att4_lsuppkey)));
-                }
-                apayl2 payl;
-                payl.att4_lsuppkey = att4_lsuppkey;
-                int bucketFound = 0;
-                int numLookups = 0;
-                while(!(bucketFound)) {   ////
-                    bucket = hashAggregateGetBucket ( aht2, SHARED_MEMORY_HT_SIZE, hash2, numLookups, &(payl));  ///
-                    if (bucket != -1) {  ////
-                        apayl2 probepayl = aht2[bucket].payload;
-                        bucketFound = 1;
-                        bucketFound &= ((payl.att4_lsuppkey == probepayl.att4_lsuppkey));
-                    } else {  ////
-                        assert(bucketFound == 0);  ////
-                        loopVar__ -= step;
-                        atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
-                        break;  ////
-                    }  ////
-                }
-#ifdef COLLISION_PRINT
-                atomicAdd(&num_collision, numLookups - 1);
-#endif
-            }
-            if(active && bucket != -1) {  ////
-                atomicAdd(&(agg1[bucket]), ((int)1));
-            }
-
-            /// Implication and Disjunction: P->Q <=>  ^P OR Q
-            /// bucket==-1 -> HT_FULL_FLAG!=0
-            assert(bucket != -1 || HT_FULL_FLAG!=0);
-
-            __syncthreads();  ////
-            if (HT_FULL_FLAG != 0) {
-                sm_to_gm(aht2, agg1, SHARED_MEMORY_HT_SIZE, g_aht2, g_agg1);
-                __threadfence_block(); /// Ensure the ordering:
-                initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
-                initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
-                if (threadIdx.x == 0) HT_FULL_FLAG = 0;
-                __syncthreads();  ////
-            }
-            loopVar__ += step;
+    int tid_lineitem1 = 0;
+    unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);
+    unsigned step = (blockDim.x * gridDim.x);
+    unsigned flushPipeline = 0;
+    int active = 0;
+    while(!(flushPipeline)) {
+        tid_lineitem1 = loopVar;
+        active = (loopVar < LINEITEM_SIZE);
+        // flush pipeline if no new elements
+        flushPipeline = !(__ballot_sync(ALL_LANES,active));
+        if(active) {
+            att4_lsuppkey = iatt4_lsuppkey[tid_lineitem1];
         }
-    }
+        // -------- aggregation (opId: 2) --------
+        int bucket = 0;
+        if(active) {
+            uint64_t hash2 = 0;
+            hash2 = 0;
+            if(active) {
+                hash2 = hash ( (hash2 + ((uint64_t)att4_lsuppkey)));
+            }
+            apayl2 payl;
+            payl.att4_lsuppkey = att4_lsuppkey;
+            int bucketFound = 0;
+            int numLookups = 0;
+            while(!(bucketFound)) {
+                bucket = hashAggregateGetBucket ( aht2, SHARED_MEMORY_HT_SIZE, hash2, numLookups, &(payl));  ///
+                if (bucket != -1) {  ////
+                    apayl2 probepayl = aht2[bucket].payload;
+                    bucketFound = 1;
+                    bucketFound &= ((payl.att4_lsuppkey == probepayl.att4_lsuppkey));
+                } else {  ////
+                    assert(bucketFound == 0);  ////
+                    loopVar -= step;
+                    atomicAdd((int *)&HT_FULL_FLAG, 1);  ////
+                    break;  ////
+                }  ////
+            }
+#ifdef COLLISION_PRINT
+            atomicAdd(&num_collision, numLookups - 1);
+#endif
+        }
 
+        cg::thread_block cta = cg::this_thread_block();
+        cg::thread_block_tile<32> tile32 = cg::tiled_partition<32>(cta);
+        unsigned int group_mask_cg = tile32.match_any(bucket);
+        if(active && bucket != -1) {  ////
+            cooperative_groups::coalesced_group g = cooperative_groups::coalesced_threads();
+            cooperative_groups::coalesced_group subtile = cooperative_groups::labeled_partition(g, group_mask_cg);
+            if (subtile.thread_rank() == 0 /*leader lane*/) {
+                atomicAdd(&(agg1[bucket]), ((int) subtile.size()));
+            }
+        }
+
+//        if(active && bucket != -1) {  ////
+//            atomicAdd(&(agg1[bucket]), ((int)1));
+//        }
+
+        /// Implication and Disjunction: P->Q <=>  ^P OR Q
+        /// bucket==-1 -> HT_FULL_FLAG!=0
+        assert(bucket != -1 || HT_FULL_FLAG!=0);
+
+        __syncthreads();  ////
+        if (HT_FULL_FLAG != 0) {
+            sm_to_gm(aht2, agg1, g_aht2, g_agg1);
+            __threadfence_block(); /// Ensure the ordering.
+            initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
+            initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
+            if (threadIdx.x == 0) HT_FULL_FLAG = 0;
+            __syncthreads();  ////
+        }
+        loopVar += step;
+    }
 
     __syncthreads();  ///
 #ifdef COLLISION_PRINT
@@ -187,17 +193,7 @@ __global__ void krnl_lineitem1(
         printf("In Block %d: num_collision: %d\n", blockIdx.x, num_collision);
     }
 #endif
-
-#ifdef HT_CHECKER
-    if (threadIdx.x == 0) {
-        if (HT_FULL_FLAG != 0) {
-            printf("FUll.\n");
-        } else {
-            printf("Not FULL.\n");
-        }
-    }
-#endif
-    sm_to_gm(aht2, agg1, SHARED_MEMORY_HT_SIZE, g_aht2, g_agg1);
+    sm_to_gm(aht2, agg1, g_aht2, g_agg1);
 }
 
 __global__ void krnl_aggregation2(
@@ -366,7 +362,7 @@ int main() {
         const int shared_memory_usage = (sizeof(agg_ht_sm<apayl2>) + sizeof(int)) * SHARED_MEMORY_HT_SIZE;
         std::cout << "Shared memory usage: " << shared_memory_usage << " bytes" << std::endl;
         cudaFuncSetAttribute(krnl_lineitem1, cudaFuncAttributeMaxDynamicSharedMemorySize, /*65536*/ shared_memory_usage);
-        krnl_lineitem1<<<gridsize, blocksize, shared_memory_usage>>>(d_iatt4_lsuppkey, d_nout_result, d_oatt4_lsuppkey, d_oatt1_countlsu, d_aht2, d_agg1);
+        krnl_lineitem1<<<gridsize, blocksize, shared_memory_usage>>>(d_iatt4_lsuppkey, d_aht2, d_agg1);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_lineitem11 = std::clock();

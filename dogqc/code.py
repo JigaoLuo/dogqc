@@ -33,10 +33,14 @@ class Code ( object ):
         self.timestamps = []
         self.hasCode = False
 
-    def add(self, line):
+    def add(self, line, newline = True):
         self.content = self.content + str(line)
-        if isinstance ( line, str ):
+        if isinstance ( line, str ) and newline:
             self.content += "\n"
+        self.hasCode = True
+
+    def addFront(self, line):
+        self.content = str(line) + "\n" + self.content
         self.hasCode = True
     
     def addFragment ( self, fragment ):

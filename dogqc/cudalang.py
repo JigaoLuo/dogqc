@@ -1,3 +1,10 @@
+SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR = "SHARED_MEMORY_HT_SIZE"
+GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER = "GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER"
+SHARED_MEMORY_USAGE = "shared_memory_usage"
+cudaFuncSetAttribute = "cudaFuncSetAttribute"
+cudaFuncAttributeMaxDynamicSharedMemorySize = "cudaFuncAttributeMaxDynamicSharedMemorySize"
+HT_FULL_FLAG = "HT_FULL_FLAG"
+SHARED_MEMORY = "shared_memory"
 
 class CType( object ):
     INT = "int"
@@ -95,7 +102,7 @@ class StructClause ( object ):
 
     def __init__( self, name, code ): 
         self.code = code
-        code.add ("struct " + name + " {")
+        code.add ("\nstruct " + name + " {")
 
     def __enter__ ( self ): 
         return self
@@ -106,13 +113,41 @@ class StructClause ( object ):
     def close ( self ):
         self.code.add ( "};" )
 
+
+class StructComparatorClause(object):
+
+    def __init__(self, name, code):
+        self.code = code
+        self.counter = 0
+        code.add("__device__ bool operator==(const " + name + "& lhs, const " + name + "& rhs) {\nreturn ", newline = False)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def add(self, identifier, is_str):
+        if (self.counter != 0):
+            self.code.add(" && ", newline = False)
+        if not is_str:
+            self.code.add("lhs." + identifier + " == rhs." + identifier, newline = False)
+        else:
+            self.code.add("stringEquals(lhs." + identifier + ", rhs." + identifier + ")", newline = False)
+        self.counter += 1
+
+    def close(self):
+        self.code.add(";\n}")
+
 class WhileLoop ( object ):
 
-    def __init__( self, condition, code ): 
+    def __init__( self, condition, code ):
         self.code = code
         code.add ( "while(" + str ( condition ) + ") {")
+        if hasattr(self.code, 'currentDeviceFunction') and self.code.currentDeviceFunction.status == 2: # 2 for STARTED
+            self.code.currentDeviceFunction.add("while(" + str(condition) + ") {")
 
-    def __enter__ ( self ): 
+    def __enter__ ( self ):
         return self
   
     def __exit__ ( self, exc_type, exc_val, exc_tb ):
@@ -120,10 +155,13 @@ class WhileLoop ( object ):
     
     def break_ ( self ):
         self.code.add ( "break;" )
-    
+        if hasattr(self.code, 'currentDeviceFunction') and self.code.currentDeviceFunction.status == 2: # 2 for STARTED
+            self.code.currentDeviceFunction.add("break;")
+
     def close ( self ):
         self.code.add ( "}" )
-
+        if hasattr(self.code, 'currentDeviceFunction') and self.code.currentDeviceFunction.status == 2: # 2 for STARTED
+            self.code.currentDeviceFunction.add("}")
 
 class ForLoop ( object ):
 
@@ -163,10 +201,12 @@ class UnrolledForLoop ( object ):
  
 class IfClause ( object ):
  
-    def __init__( self, condition, code ): 
+    def __init__( self, condition, code ):
         self.code = code
         code.add ( "if(" + str(condition) + ") {")
-    
+        if hasattr(self.code, 'currentDeviceFunction') and self.code.currentDeviceFunction.status == 2: # 2 for STARTED
+            self.code.currentDeviceFunction.add("if(" + str(condition) + ") {")
+
     def __enter__ ( self ): 
         return self
   
@@ -175,6 +215,8 @@ class IfClause ( object ):
 
     def close ( self ):
         self.code.add ( "}" )
+        if hasattr(self.code, 'currentDeviceFunction') and self.code.currentDeviceFunction.status == 2: # 2 for STARTED
+            self.code.currentDeviceFunction.add("}")
 
 class ElseIfClause ( object ):
  
@@ -216,11 +258,23 @@ def cast ( typename, expr ):
 def declare ( variable ):
     return variable.dataType + " " + variable.name
 
+def declareEasy ( dataType, name ):
+    return dataType + " " + name
+
 def declareSharedArray ( variable, length ):
     return "__shared__ " + variable.dataType + " " + variable.name + "[" + length + "]"
 
 def declareShared ( variable ):
     return "__shared__ " + variable.dataType + " " + variable.name
+
+def declareSharedEasy ( dataType, name ):
+    return "__shared__ " + dataType + " " + name
+
+def declareVolatileSharedEasy ( dataType, name ):
+    return "volatile __shared__ " + dataType + " " + name
+
+def declareexternSharedArrayEasy ( dataType, name ):
+    return "extern __shared__ " + dataType + " " + name+ "[]"
 
 def declarePointer ( variable ):
     return ptr ( variable.dataType ) + " " + variable.name
@@ -355,7 +409,7 @@ def strcpy ( dest, source ):
     return "strcpy ( " + dest + ", " + source + ")"
 
 def sizeof ( expr ):
-    return "sizeof ( " + str(expr) + ")"
+    return "sizeof (" + str(expr) + ")"
 
 def addressof ( expr ):
     return "&(" + str(expr) + ")"
@@ -386,6 +440,18 @@ def clzIntr ( expr ):
 
 def ffsIntr ( expr ):
     return "__ffs(" + str(expr) + ")"
+
+def initSMAggHT ( expr, id ):
+    return "initSMAggHT(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + id + ")"
+
+def initSMAggArray ( expr, id, value = None ):
+    if value == None:
+        return "initSMAggArray(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + id + ")"
+    else:
+        return "initSMAggArray(" + str(expr) + ", " + SHARED_MEMORY_HT_SIZE_CONSTEXPR_STR + id + "," + str(value) + ")"
+
+def assertion ( expr ):
+    return "assert(" + str(expr) + ")"
 
 def printf ( string, params=[] ):
     if params != []:
@@ -418,6 +484,12 @@ def blockIdx_x ( ):
 
 def gridDim_x ( ):
     return "gridDim.x"
+
+def threadfence ( ):
+    return "__threadfence()"
+
+def threadfence_block ( ):
+    return "__threadfence_block()"
 
 def syncthreads ( ):
     return "__syncthreads()"

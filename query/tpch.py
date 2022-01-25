@@ -29,7 +29,7 @@ def main():
     acc = io.dbAccess ( schema.tpch.tpchSchema, "mmdb", sys.argv[1] )
     # execute all tpch 
     if sys.argv[2] == "all":
-        for i in range(1,23 + 6):
+        for i in range(1, 23 + 7):
             print ( "-----------------------Executing TPCH-H query " + str(i) + "-----------------------" )
             execTpch ( acc, i )
     # execute one tpch 
@@ -61,7 +61,7 @@ def execTpch ( acc, num, showPlan=False ):
     if showPlan:
         alg.showGraph ( plan )
 
-    compiler = CudaCompiler ( algebraContext = alg, smArchitecture = "sm_75", decimalRepr = CType.FP32, debug = False )
+    compiler = CudaCompiler ( algebraContext = alg, smArchitecture = "sm_75", decimalRepr = CType.FP64, debug = False )
 
     compilerPlan = alg.translateToCompilerPlan ( plan, compiler )
     compiler.gencode ( compilerPlan )
