@@ -1,10 +1,9 @@
-/// My Query 27
-/// select l_orderkey, count(*) --> l_orderkey is the 1st attribute in lineitem table
+/// My Query 23
+/// select l_linenumber, count(*) --> l_linenumber is the 4th attribute in lineitem table
 /// from lineitem
-/// group by l_orderkey
-/// order by l_orderkey
-#include <map>
+/// group by l_linenumber
 #include <cassert>
+#include <cstring>  ///
 //#define COLLISION_PRINT
 
 #include <list>
@@ -20,27 +19,26 @@
 #include "../dogqc/include/util.cuh"
 #include "../dogqc/include/hashing.cuh"
 struct apayl2 {
-    int att2_lorderke;
+    int att5_llinenum;
 };
 
 __device__ bool operator==(const apayl2& lhs, const apayl2& rhs) {
-    return lhs.att2_lorderke == rhs.att2_lorderke;
+    return lhs.att5_llinenum == rhs.att5_llinenum;
 }
 
 constexpr int SHARED_MEMORY_HT_SIZE = 1024;  /// In shared memory
-constexpr int LINEITEM_SIZE = 6001215; const std::string file_path = "mmdb/tpch-dbgen-sf1/lineitem_l_orderkey";      /// SF1
-//constexpr int LINEITEM_SIZE = 59986052;  const std::string file_path = "mmdb/tpch-dbgen-sf10/lineitem_l_orderkey";     /// SF10
+constexpr int LINEITEM_SIZE = 6001215; const std::string file_path = "mmdb/tpch-dbgen-sf1/lineitem_l_linenumber";      /// SF1
+//constexpr int LINEITEM_SIZE = 59986052;  const std::string file_path = "mmdb/tpch-dbgen-sf10/lineitem_l_linenumber";     /// SF10
 constexpr int NUMBRE_SM = 22;
-constexpr int GLOBAL_HT_SIZE = LINEITEM_SIZE * 10 / NUMBRE_SM;  /// In global memory
+constexpr int GLOBAL_HT_SIZE = LINEITEM_SIZE * 2 / NUMBRE_SM;  /// In global memory
 constexpr int GLOBAL_HT_SIZE_REAL = GLOBAL_HT_SIZE * NUMBRE_SM;  /// In global memory
-//constexpr int GLOBAL_HT_SIZE = 4194304;  /// In global memory
+//constexpr int GLOBAL_HT_SIZE = 8192;  /// In global memory
 
 __device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, int* agg1, agg_ht<apayl2>* g_aht2, int* g_agg1) {
     /// Copy the shared memory hash table (pre-aggreagation) into the global hash table.
     /// <-- START: first half of the kernel 2
-    int att2_lorderke;
-    int att1_countlor;
-
+    int att5_llinenum;
+    int att1_countlli;
     int tid_aggregation2 = 0;
     unsigned loopVar = threadIdx.x;  ///
     unsigned step = blockDim.x;  ///
@@ -59,10 +57,10 @@ __device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, int* agg1, agg_ht<apayl2>* g_a
         }
         if(active) {
             apayl2 payl = aht2[tid_aggregation2].payload;
-            att2_lorderke = payl.att2_lorderke;
+            att5_llinenum = payl.att5_llinenum;
         }
         if(active) {
-            att1_countlor = agg1[tid_aggregation2];
+            att1_countlli = agg1[tid_aggregation2];
         }
         /// <-- END: first half of the kernel 2
 
@@ -73,30 +71,29 @@ __device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, int* agg1, agg_ht<apayl2>* g_a
             uint64_t hash2 = 0;
             hash2 = 0;
             if(active) {
-                hash2 = hash ( (hash2 + ((uint64_t)att2_lorderke)));
+                hash2 = hash ( (hash2 + ((uint64_t)att5_llinenum)));
             }
             apayl2 payl;
-            payl.att2_lorderke = att2_lorderke;
+            payl.att5_llinenum = att5_llinenum;
             int bucketFound = 0;
             int numLookups = 0;
             while(!(bucketFound)) {
                 bucket = hashAggregateGetBucket ( g_aht2, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
                 apayl2 probepayl = g_aht2[bucket].payload;  ////
                 bucketFound = 1;
-                bucketFound &= ((payl.att2_lorderke == probepayl.att2_lorderke));
+                bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
             }
         }
         if(active) {
-            atomicAdd(&(g_agg1[bucket]), ((int)att1_countlor));  ////
+            atomicAdd(&(g_agg1[bucket]), ((int)att1_countlli));  ////
         }
-
         /// <-- END: second half of the kernel 1
         loopVar += step;
     }
 }
 
 __global__ void krnl_lineitem1(
-    int* iatt2_lorderke, agg_ht<apayl2>* g_aht2, int* g_agg1) {  ///
+    int* iatt5_llinenum, agg_ht<apayl2>* g_aht2, int* g_agg1) {  ///
 
     /// local block memory cache : ONLY FOR A BLOCK'S THREADS!!!
     extern __shared__ char shared_memory[];
@@ -116,7 +113,7 @@ __global__ void krnl_lineitem1(
     g_agg1 = g_agg1 + ( GLOBAL_HT_SIZE * smid );
 
     /// The first old kenrel
-    int att2_lorderke;
+    int att5_llinenum;
 
     int tid_lineitem1 = 0;
     unsigned loopVar = ((blockIdx.x * blockDim.x) + threadIdx.x);
@@ -129,7 +126,7 @@ __global__ void krnl_lineitem1(
         // flush pipeline if no new elements
         flushPipeline = !(__ballot_sync(ALL_LANES,active));
         if(active) {
-            att2_lorderke = iatt2_lorderke[tid_lineitem1];
+            att5_llinenum = iatt5_llinenum[tid_lineitem1];
         }
         // -------- aggregation (opId: 2) --------
         int bucket = 0;
@@ -137,18 +134,18 @@ __global__ void krnl_lineitem1(
             uint64_t hash2 = 0;
             hash2 = 0;
             if(active) {
-                hash2 = hash ( (hash2 + ((uint64_t)att2_lorderke)));
+                hash2 = hash ( (hash2 + ((uint64_t)att5_llinenum)));
             }
             apayl2 payl;
-            payl.att2_lorderke = att2_lorderke;
+            payl.att5_llinenum = att5_llinenum;
             int bucketFound = 0;
             int numLookups = 0;
             while(!(bucketFound)) {
-                bucket = hashAggregateGetBucket ( aht2,SHARED_MEMORY_HT_SIZE, hash2, numLookups, &(payl));  ///
-                if (bucket != -1) {  ////
-                    apayl2 probepayl = aht2[bucket].payload;
+                bucket = hashAggregateGetBucket ( g_aht2, SHARED_MEMORY_HT_SIZE, hash2, numLookups, &(payl));  ///
+                if (bucket != -1) {
+                    apayl2 probepayl = g_aht2[bucket].payload;
                     bucketFound = 1;
-                    bucketFound &= ((payl.att2_lorderke == probepayl.att2_lorderke));
+                    bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
                 } else {
                     assert(bucketFound == 0);  ////
                     loopVar -= step;
@@ -161,7 +158,7 @@ __global__ void krnl_lineitem1(
 #endif
         }
         if(active && bucket != -1) {  ////
-            atomicAdd(&(agg1[bucket]), ((int)1));
+            atomicAdd(&(g_agg1[bucket]), ((int)1));
         }
 
         /// Implication and Disjunction: P->Q <=>  ^P OR Q
@@ -189,13 +186,13 @@ __global__ void krnl_lineitem1(
         printf("In Block %d: num_collision: %d\n", blockIdx.x, num_collision);
     }
 #endif
-    sm_to_gm(aht2, agg1, g_aht2, g_agg1);
+//    sm_to_gm(aht2, agg1, g_aht2, g_agg1);
 }
 
-__global__ void krnl_aggregation2(
-        agg_ht<apayl2>* aht2, int* agg1, agg_ht<apayl2>* aht2_, int* agg1_) {
-    int att2_lorderke;
-    int att1_countlor;
+__global__ void krnl_reduce(
+        agg_ht<apayl2>* aht2, int* agg1, agg_ht<apayl2>* aht2_, int* agg1_) {  ///
+    int att5_llinenum;
+    int att1_countlli;
     unsigned warplane = (threadIdx.x % 32);
     unsigned prefixlanes = (0xffffffff >> (32 - warplane));
 
@@ -211,7 +208,7 @@ __global__ void krnl_aggregation2(
     int active = 0;
     while(!(flushPipeline)) {
         tid_aggregation2 = loopVar;
-        active = (loopVar < GLOBAL_HT_SIZE);
+        active = (loopVar < GLOBAL_HT_SIZE);  ///
         // flush pipeline if no new elements
         flushPipeline = !(__ballot_sync(ALL_LANES,active));
         if(active) {
@@ -222,10 +219,10 @@ __global__ void krnl_aggregation2(
         }
         if(active) {
             apayl2 payl = aht2[tid_aggregation2].payload;
-            att2_lorderke = payl.att2_lorderke;
+            att5_llinenum = payl.att5_llinenum;
         }
         if(active) {
-            att1_countlor = agg1[tid_aggregation2];
+            att1_countlli = agg1[tid_aggregation2];
         }
 
         /// Insert to global hash table.
@@ -234,33 +231,31 @@ __global__ void krnl_aggregation2(
             uint64_t hash2 = 0;
             hash2 = 0;
             if(active) {
-                hash2 = hash ( (hash2 + ((uint64_t)att2_lorderke)));
+                hash2 = hash ( (hash2 + ((uint64_t)att5_llinenum)));
             }
             apayl2 payl;
-            payl.att2_lorderke = att2_lorderke;
+            payl.att5_llinenum = att5_llinenum;
             int bucketFound = 0;
             int numLookups = 0;
             while(!(bucketFound)) {
                 bucket = hashAggregateGetBucket ( aht2_, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
                 apayl2 probepayl = aht2_[bucket].payload;  ////
                 bucketFound = 1;
-                bucketFound &= ((payl.att2_lorderke == probepayl.att2_lorderke));
+                bucketFound &= ((payl.att5_llinenum == probepayl.att5_llinenum));
             }
         }
         if(active) {
-            atomicAdd(&(agg1_[bucket]), ((int)att1_countlor));  ////
+            atomicAdd(&(agg1_[bucket]), ((int)att1_countlli));  ////
         }
-
 
         loopVar += step;
     }
-
 }
 
-__global__ void krnl_aggregation3(
-        agg_ht<apayl2>* aht2, int* agg1, int* nout_result, int* oatt2_lorderke, int* oatt1_countlor) {
-    int att2_lorderke;
-    int att1_countlor;
+__global__ void krnl_reduce_final(
+        agg_ht<apayl2>* aht2, int* agg1, int* n_out_result, int* oatt5_llinenum, int* oatt1_countlli) {  ///
+    int att5_llinenum;
+    int att1_countlli;
     unsigned warplane = (threadIdx.x % 32);
     unsigned prefixlanes = (0xffffffff >> (32 - warplane));
 
@@ -271,7 +266,7 @@ __global__ void krnl_aggregation3(
     int active = 0;
     while(!(flushPipeline)) {
         tid_aggregation2 = loopVar;
-        active = (loopVar < GLOBAL_HT_SIZE);
+        active = (loopVar < GLOBAL_HT_SIZE);  ///
         // flush pipeline if no new elements
         flushPipeline = !(__ballot_sync(ALL_LANES,active));
         if(active) {
@@ -282,10 +277,10 @@ __global__ void krnl_aggregation3(
         }
         if(active) {
             apayl2 payl = aht2[tid_aggregation2].payload;
-            att2_lorderke = payl.att2_lorderke;
+            att5_llinenum = payl.att5_llinenum;
         }
         if(active) {
-            att1_countlor = agg1[tid_aggregation2];
+            att1_countlli = agg1[tid_aggregation2];
         }
         // -------- projection (no code) (opId: 3) --------
         // -------- materialize (opId: 4) --------
@@ -295,26 +290,25 @@ __global__ void krnl_aggregation3(
         writeMask = __ballot_sync(ALL_LANES,active);
         numProj = __popc(writeMask);
         if((warplane == 0)) {
-            wp = atomicAdd(nout_result, numProj);
+            wp = atomicAdd(n_out_result, numProj);
         }
         wp = __shfl_sync(ALL_LANES,wp,0);
         wp = (wp + __popc((writeMask & prefixlanes)));
         if(active) {
-            oatt2_lorderke[wp] = att2_lorderke;
-            oatt1_countlor[wp] = att1_countlor;
+            oatt5_llinenum[wp] = att5_llinenum;
+            oatt1_countlli[wp] = att1_countlli;
         }
         loopVar += step;
     }
-
 }
 
 int main() {
-    int* iatt2_lorderke;
-    iatt2_lorderke = ( int*) map_memory_file ( file_path.c_str() );
+    int* iatt5_llinenum;
+    iatt5_llinenum = ( int*) map_memory_file ( file_path.c_str() );
 
     int nout_result;
-    std::vector < int > oatt2_lorderke(LINEITEM_SIZE);
-    std::vector < int > oatt1_countlor(LINEITEM_SIZE);
+    std::vector < int > oatt5_llinenum(LINEITEM_SIZE);
+    std::vector < int > oatt1_countlli(LINEITEM_SIZE);
 
     // wake up gpu
     cudaDeviceSynchronize();
@@ -326,14 +320,17 @@ int main() {
         }
     }
 
-    int* d_iatt2_lorderke;
-    cudaMalloc((void**) &d_iatt2_lorderke, LINEITEM_SIZE* sizeof(int) );
+    /// Input as Column Store.
+    int* d_iatt5_llinenum;
+    cudaMalloc((void**) &d_iatt5_llinenum, LINEITEM_SIZE* sizeof(int) );  /// l_linenumber is the 4th attribute in lineitem table
+
+    /// Output: allocated as max group size: the same size as the lineitem table's cardinality.
     int* d_nout_result;
     cudaMalloc((void**) &d_nout_result, 1* sizeof(int) );
-    int* d_oatt2_lorderke;
-    cudaMalloc((void**) &d_oatt2_lorderke, LINEITEM_SIZE* sizeof(int) );
-    int* d_oatt1_countlor;
-    cudaMalloc((void**) &d_oatt1_countlor, LINEITEM_SIZE* sizeof(int) );
+    int* d_oatt5_llinenum;
+    cudaMalloc((void**) &d_oatt5_llinenum, LINEITEM_SIZE* sizeof(int) );
+    int* d_oatt1_countlli;  /// For SQL projection.
+    cudaMalloc((void**) &d_oatt1_countlli, LINEITEM_SIZE* sizeof(int) );
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -360,33 +357,34 @@ int main() {
         fflush(stdout);
     }
 
-    agg_ht<apayl2>* d_global_aht2;
-    cudaMalloc((void**) &d_global_aht2, GLOBAL_HT_SIZE_REAL* sizeof(agg_ht<apayl2>) );
+
+    agg_ht<apayl2>* d_aht2;
+    cudaMalloc((void**) &d_aht2, GLOBAL_HT_SIZE_REAL * sizeof(agg_ht<apayl2>) );
     {
         int gridsize=920;
         int blocksize=128;
-        initAggHT<<<gridsize, blocksize>>>(d_global_aht2, GLOBAL_HT_SIZE_REAL);
+        initAggHT<<<gridsize, blocksize>>>(d_aht2, GLOBAL_HT_SIZE_REAL);
     }
-    int* d_global_agg1;
-    cudaMalloc((void**) &d_global_agg1, GLOBAL_HT_SIZE_REAL* sizeof(int) );
+    int* d_agg1;
+    cudaMalloc((void**) &d_agg1, GLOBAL_HT_SIZE_REAL * sizeof(int) );
     {
         int gridsize=920;
         int blocksize=128;
-        initArray<<<gridsize, blocksize>>>(d_global_agg1, 0, GLOBAL_HT_SIZE_REAL);
+        initArray<<<gridsize, blocksize>>>(d_agg1, 0, GLOBAL_HT_SIZE_REAL );
     }
-    agg_ht<apayl2>* d_global_aht2_;
-    cudaMalloc((void**) &d_global_aht2_, GLOBAL_HT_SIZE* sizeof(agg_ht<apayl2>) );
+    agg_ht<apayl2>* d_aht2_;
+    cudaMalloc((void**) &d_aht2_, GLOBAL_HT_SIZE * sizeof(agg_ht<apayl2>) );
     {
         int gridsize=920;
         int blocksize=128;
-        initAggHT<<<gridsize, blocksize>>>(d_global_aht2_, GLOBAL_HT_SIZE);
+        initAggHT<<<gridsize, blocksize>>>(d_aht2_, GLOBAL_HT_SIZE);
     }
-    int* d_global_agg1_;
-    cudaMalloc((void**) &d_global_agg1_, GLOBAL_HT_SIZE* sizeof(int) );
+    int* d_agg1_;
+    cudaMalloc((void**) &d_agg1_, GLOBAL_HT_SIZE * sizeof(int) );
     {
         int gridsize=920;
         int blocksize=128;
-        initArray<<<gridsize, blocksize>>>(d_global_agg1_, 0, GLOBAL_HT_SIZE);
+        initArray<<<gridsize, blocksize>>>(d_agg1_, 0, GLOBAL_HT_SIZE );
     }
     {
         int gridsize=920;
@@ -419,7 +417,7 @@ int main() {
         fflush(stdout);
     }
 
-    cudaMemcpy( d_iatt2_lorderke, iatt2_lorderke, LINEITEM_SIZE * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy( d_iatt5_llinenum, iatt5_llinenum, LINEITEM_SIZE * sizeof(int), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -437,7 +435,7 @@ int main() {
         const int shared_memory_usage = (sizeof(agg_ht_sm<apayl2>) + sizeof(int)) * SHARED_MEMORY_HT_SIZE;
         std::cout << "Shared memory usage: " << shared_memory_usage << " bytes" << std::endl;
         cudaFuncSetAttribute(krnl_lineitem1, cudaFuncAttributeMaxDynamicSharedMemorySize, /*65536*/ shared_memory_usage);
-        krnl_lineitem1<<<220, blocksize, shared_memory_usage>>>(d_iatt2_lorderke, d_global_aht2, d_global_agg1);
+        krnl_lineitem1<<<220, blocksize, shared_memory_usage>>>(d_iatt5_llinenum, d_aht2, d_agg1);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_lineitem11 = std::clock();
@@ -449,35 +447,28 @@ int main() {
         }
     }
 
-    std::clock_t start_krnl_aggregation22 = std::clock();
+    std::clock_t start_krnl_reduce2 = std::clock();
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_aggregation2<<<220, blocksize>>>(d_global_aht2, d_global_agg1, d_global_aht2_, d_global_agg1_);
+        krnl_reduce<<<220, blocksize>>>(d_aht2, d_agg1, d_aht2_, d_agg1_);
     }
     cudaDeviceSynchronize();
-    std::clock_t stop_krnl_aggregation22 = std::clock();
+    std::clock_t stop_krnl_reduce2 = std::clock();
 
-    std::clock_t start_krnl_aggregation23 = std::clock();
+    std::clock_t start_krnl_reduce3 = std::clock();
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_aggregation3<<<gridsize, blocksize>>>(d_global_aht2_, d_global_agg1_, d_nout_result, d_oatt2_lorderke, d_oatt1_countlor);
+        krnl_reduce_final<<<gridsize, blocksize>>>(d_aht2_, d_agg1_, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
     }
     cudaDeviceSynchronize();
-    std::clock_t stop_krnl_aggregation23 = std::clock();
+    std::clock_t stop_krnl_reduce3 = std::clock();
     std::clock_t stop_totalKernelTime0 = std::clock();
-    {
-        cudaError err = cudaGetLastError();
-        if(err != cudaSuccess) {
-            std::cerr << "Cuda Error in krnl_aggregation2! " << cudaGetErrorString( err ) << std::endl;
-            ERROR("krnl_aggregation2")
-        }
-    }
 
     cudaMemcpy( &nout_result, d_nout_result, 1 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt2_lorderke.data(), d_oatt2_lorderke, LINEITEM_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy( oatt1_countlor.data(), d_oatt1_countlor, LINEITEM_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt5_llinenum.data(), d_oatt5_llinenum, LINEITEM_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy( oatt1_countlli.data(), d_oatt1_countlli, LINEITEM_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -487,12 +478,12 @@ int main() {
         }
     }
 
-    cudaFree( d_iatt2_lorderke);
+    cudaFree( d_iatt5_llinenum);
     cudaFree( d_nout_result);
-    cudaFree( d_oatt2_lorderke);
-    cudaFree( d_oatt1_countlor);
-    cudaFree( d_global_aht2);
-    cudaFree( d_global_agg1);
+    cudaFree( d_oatt5_llinenum);
+    cudaFree( d_oatt1_countlli);
+    cudaFree( d_aht2);
+    cudaFree( d_agg1);
     cudaDeviceSynchronize();
     {
         cudaError err = cudaGetLastError();
@@ -508,48 +499,25 @@ int main() {
         ERROR("Index out of range. Output size larger than allocated with expected result number.")
     }
     for ( int pv = 0; ((pv < 10) && (pv < nout_result)); pv += 1) {
-        printf("l_orderkey: ");
-        printf("%8i", oatt2_lorderke[pv]);
+        printf("l_linenumber: ");
+        printf("%8i", oatt5_llinenum[pv]);
         printf("  ");
-        printf("count_l_orderkey: ");
-        printf("%8i", oatt1_countlor[pv]);
+        printf("count_l_linenumber: ");
+        printf("%8i", oatt1_countlli[pv]);
         printf("  ");
         printf("\n");
     }
     if((nout_result > 10)) {
-        printf("[...unsorted...]\n");
-    }
-    printf("\n");
-
-    /// 40 sorted output
-    std::map<int, int> ht;
-    for ( int pv = 0; pv < nout_result; pv += 1) {  ///
-        ht.emplace(oatt2_lorderke[pv], oatt1_countlor[pv]);
-    }
-    auto it = ht.begin();
-    printf("\nResult: %ld tuples\n", ht.size());
-    for ( int pv = 0; ((pv < 25) && (pv < ht.size())); pv += 1) {
-        printf("l_orderkey: ");
-        printf("%8i", it->first);
-        printf("  ");
-        printf("count_l_orderkey: ");
-        printf("%8i", it->second);
-        printf("  ");
-        printf("\n");
-        std::advance(it, 1);
-    }
-    if((ht.size() > 25)) {
-        printf("[...sorted...]\n");
+        printf("[...]\n");
     }
     printf("\n");
     std::clock_t stop_finish3 = std::clock();
 
-
     printf("<timing>\n");
     printf ( "%32s: %6.1f ms\n", "finish", (stop_finish3 - start_finish3) / (double) (CLOCKS_PER_SEC / 1000) );
     printf ( "%32s: %6.1f ms\n", "krnl_lineitem1", (stop_krnl_lineitem11 - start_krnl_lineitem11) / (double) (CLOCKS_PER_SEC / 1000) );
-    printf ( "%32s: %6.1f ms\n", "krnl_aggregation2", (stop_krnl_aggregation22 - start_krnl_aggregation22) / (double) (CLOCKS_PER_SEC / 1000) );
-    printf ( "%32s: %6.1f ms\n", "krnl_aggregation3", (stop_krnl_aggregation23 - start_krnl_aggregation23) / (double) (CLOCKS_PER_SEC / 1000) );
+    printf ( "%32s: %6.1f ms\n", "krnl_aggregation2", (stop_krnl_reduce2 - start_krnl_reduce2) / (double) (CLOCKS_PER_SEC / 1000) );
+    printf ( "%32s: %6.1f ms\n", "krnl_aggregation2_final", (stop_krnl_reduce3 - start_krnl_reduce3) / (double) (CLOCKS_PER_SEC / 1000) );
     printf ( "%32s: %6.1f ms\n", "totalKernelTime", (stop_totalKernelTime0 - start_totalKernelTime0) / (double) (CLOCKS_PER_SEC / 1000) );
     printf("</timing>\n");
 }

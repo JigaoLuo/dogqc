@@ -29,9 +29,11 @@ __device__ bool operator==(const apayl2& lhs, const apayl2& rhs) {
 }
 
 constexpr int SHARED_MEMORY_HT_SIZE = 1024;  /// In shared memory
-constexpr int LINEITEM_SIZE = 6001215; const std::string file_path = "mmdb/tpch-dbgen-sf1/lineitem_l_suppkey";      /// SF1
-//constexpr int LINEITEM_SIZE = 59986052;  const std::string file_path = "mmdb/tpch-dbgen-sf10/lineitem_l_suppkey";     /// SF10
-constexpr int GLOBAL_HT_SIZE = LINEITEM_SIZE * 2;  /// In global memory
+//constexpr int LINEITEM_SIZE = 6001215; const std::string file_path = "mmdb/tpch-dbgen-sf1/lineitem_l_suppkey";      /// SF1
+constexpr int LINEITEM_SIZE = 59986052;  const std::string file_path = "mmdb/tpch-dbgen-sf10/lineitem_l_suppkey";     /// SF10
+constexpr int NUMBRE_SM = 22;
+constexpr int GLOBAL_HT_SIZE = LINEITEM_SIZE * 2 / NUMBRE_SM;  /// In global memory
+constexpr int GLOBAL_HT_SIZE_REAL = GLOBAL_HT_SIZE * NUMBRE_SM;  /// In global memory
 //constexpr int GLOBAL_HT_SIZE = 65536;  /// In global memory
 
 __device__ void sm_to_gm(agg_ht_sm<apayl2>* aht2, int* agg1, agg_ht<apayl2>* g_aht2, int* g_agg1) {
@@ -108,6 +110,10 @@ __global__ void krnl_lineitem1(
     initSMAggHT(aht2,SHARED_MEMORY_HT_SIZE);
     initSMAggArray(agg1,SHARED_MEMORY_HT_SIZE);
     __syncthreads();
+
+    uint32_t smid = blockIdx.x % NUMBRE_SM;
+    g_aht2 = g_aht2 + ( GLOBAL_HT_SIZE * smid );
+    g_agg1 = g_agg1 + ( GLOBAL_HT_SIZE * smid );
 
     /// The first old kenrel
     int att4_lsuppkey;
@@ -197,7 +203,71 @@ __global__ void krnl_lineitem1(
 }
 
 __global__ void krnl_aggregation2(
-    agg_ht<apayl2>* aht2, int* agg1, int* nout_result, int* oatt4_lsuppkey, int* oatt1_countlsu) {
+    agg_ht<apayl2>* aht2, int* agg1, agg_ht<apayl2>* aht2_, int* agg1_) {
+    int att4_lsuppkey;
+    int att1_countlsu;
+    unsigned warplane = (threadIdx.x % 32);
+    unsigned prefixlanes = (0xffffffff >> (32 - warplane));
+
+    uint32_t smid = blockIdx.x % NUMBRE_SM;
+    aht2 = aht2 + ( GLOBAL_HT_SIZE * smid );
+    agg1 = agg1 + ( GLOBAL_HT_SIZE * smid );
+    uint32_t sm_it = blockIdx.x / NUMBRE_SM;
+
+    int tid_aggregation2 = 0;
+    unsigned loopVar = ( ( sm_it * blockDim.x ) + threadIdx.x );
+    unsigned step = ( blockDim.x * ( gridDim.x / NUMBRE_SM ) );
+    unsigned flushPipeline = 0;
+    int active = 0;
+    while(!(flushPipeline)) {
+        tid_aggregation2 = loopVar;
+        active = (loopVar < GLOBAL_HT_SIZE);  ///!!!!
+        // flush pipeline if no new elements
+        flushPipeline = !(__ballot_sync(ALL_LANES,active));
+        if(active) {
+        }
+        // -------- scan aggregation ht (opId: 2) --------
+        if(active) {
+            active &= ((aht2[tid_aggregation2].lock.lock == OnceLock::LOCK_DONE));
+        }
+        if(active) {
+            apayl2 payl = aht2[tid_aggregation2].payload;
+            att4_lsuppkey = payl.att4_lsuppkey;
+        }
+        if(active) {
+            att1_countlsu = agg1[tid_aggregation2];
+        }
+
+        /// Insert to global hash table.
+        int bucket = 0;
+        if(active) {
+            uint64_t hash2 = 0;
+            hash2 = 0;
+            if(active) {
+                hash2 = hash ( (hash2 + ((uint64_t)att4_lsuppkey)));
+            }
+            apayl2 payl;
+            payl.att4_lsuppkey = att4_lsuppkey;
+            int bucketFound = 0;
+            int numLookups = 0;
+            while(!(bucketFound)) {
+                bucket = hashAggregateGetBucket ( aht2_, GLOBAL_HT_SIZE, hash2, numLookups, &(payl));  ////
+                apayl2 probepayl = aht2_[bucket].payload;  ////
+                bucketFound = 1;
+                bucketFound &= ((payl.att4_lsuppkey == probepayl.att4_lsuppkey));
+            }
+        }
+        if(active) {
+            atomicAdd(&(agg1_[bucket]), ((int)att1_countlsu));  ////
+        }
+
+        loopVar += step;
+    }
+
+}
+
+__global__ void krnl_aggregation3(
+        agg_ht<apayl2>* aht2, int* agg1, int* nout_result, int* oatt4_lsuppkey, int* oatt1_countlsu) {
     int att4_lsuppkey;
     int att1_countlsu;
     unsigned warplane = (threadIdx.x % 32);
@@ -300,18 +370,32 @@ int main() {
     }
 
     agg_ht<apayl2>* d_aht2;
-    cudaMalloc((void**) &d_aht2, GLOBAL_HT_SIZE* sizeof(agg_ht<apayl2>) );
+    cudaMalloc((void**) &d_aht2, GLOBAL_HT_SIZE_REAL* sizeof(agg_ht<apayl2>) );
     {
         int gridsize=920;
         int blocksize=128;
-        initAggHT<<<gridsize, blocksize>>>(d_aht2, GLOBAL_HT_SIZE);
+        initAggHT<<<gridsize, blocksize>>>(d_aht2, GLOBAL_HT_SIZE_REAL);
     }
     int* d_agg1;
-    cudaMalloc((void**) &d_agg1, GLOBAL_HT_SIZE* sizeof(int) );
+    cudaMalloc((void**) &d_agg1, GLOBAL_HT_SIZE_REAL* sizeof(int) );
     {
         int gridsize=920;
         int blocksize=128;
-        initArray<<<gridsize, blocksize>>>(d_agg1, 0, GLOBAL_HT_SIZE);
+        initArray<<<gridsize, blocksize>>>(d_agg1, 0, GLOBAL_HT_SIZE_REAL);
+    }
+    agg_ht<apayl2>* d_aht2_;
+    cudaMalloc((void**) &d_aht2_, GLOBAL_HT_SIZE* sizeof(agg_ht<apayl2>) );
+    {
+        int gridsize=920;
+        int blocksize=128;
+        initAggHT<<<gridsize, blocksize>>>(d_aht2_, GLOBAL_HT_SIZE);
+    }
+    int* d_agg1_;
+    cudaMalloc((void**) &d_agg1_, GLOBAL_HT_SIZE* sizeof(int) );
+    {
+        int gridsize=920;
+        int blocksize=128;
+        initArray<<<gridsize, blocksize>>>(d_agg1_, 0, GLOBAL_HT_SIZE);
     }
     {
         int gridsize=920;
@@ -362,7 +446,7 @@ int main() {
         const int shared_memory_usage = (sizeof(agg_ht_sm<apayl2>) + sizeof(int)) * SHARED_MEMORY_HT_SIZE;
         std::cout << "Shared memory usage: " << shared_memory_usage << " bytes" << std::endl;
         cudaFuncSetAttribute(krnl_lineitem1, cudaFuncAttributeMaxDynamicSharedMemorySize, /*65536*/ shared_memory_usage);
-        krnl_lineitem1<<<gridsize, blocksize, shared_memory_usage>>>(d_iatt4_lsuppkey, d_aht2, d_agg1);
+        krnl_lineitem1<<<220, blocksize, shared_memory_usage>>>(d_iatt4_lsuppkey, d_aht2, d_agg1);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_lineitem11 = std::clock();
@@ -378,7 +462,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_aggregation2<<<gridsize, blocksize>>>(d_aht2, d_agg1, d_nout_result, d_oatt4_lsuppkey, d_oatt1_countlsu);
+        krnl_aggregation2<<<220, blocksize>>>(d_aht2, d_agg1, d_aht2_, d_agg1_);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_aggregation22 = std::clock();
@@ -387,6 +471,22 @@ int main() {
         if(err != cudaSuccess) {
             std::cerr << "Cuda Error in krnl_aggregation2! " << cudaGetErrorString( err ) << std::endl;
             ERROR("krnl_aggregation2")
+        }
+    }
+
+    std::clock_t start_krnl_aggregation23 = std::clock();
+    {
+        int gridsize=920;
+        int blocksize=128;
+        krnl_aggregation3<<<gridsize, blocksize>>>(d_aht2_, d_agg1_, d_nout_result, d_oatt4_lsuppkey, d_oatt1_countlsu);
+    }
+    cudaDeviceSynchronize();
+    std::clock_t stop_krnl_aggregation23 = std::clock();
+    {
+        cudaError err = cudaGetLastError();
+        if(err != cudaSuccess) {
+            std::cerr << "Cuda Error in krnl_aggregation3! " << cudaGetErrorString( err ) << std::endl;
+            ERROR("krnl_aggregation3")
         }
     }
     std::clock_t stop_totalKernelTime0 = std::clock();
