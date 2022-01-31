@@ -17,7 +17,7 @@ import dogqc.scalarAlgebra as scal
 from dogqc.kernel import KernelCall
 from dogqc.hashJoins import EquiJoinTranslator 
 
-KernelCall.defaultGridSize = 920
+KernelCall.defaultGridSize = 440 # TODO(jigao): tune it later
 KernelCall.defaultBlockSize = 128
 EquiJoinTranslator.usePushDownJoin = True
 
