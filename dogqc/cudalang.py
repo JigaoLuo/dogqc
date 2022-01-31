@@ -405,6 +405,9 @@ def notEquals ( left, right ):
 def emit ( line, code ):
     code.add ( line + ";" )
 
+def emit_wi_simicolon ( line, code ):
+    code.add ( line )
+
 def strcpy ( dest, source ):
     return "strcpy ( " + dest + ", " + source + ")"
 
