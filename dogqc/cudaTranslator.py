@@ -500,8 +500,17 @@ class AggregationTranslator ( UnaryTranslator ):
                         emit ( breakLoop(), ctxt.codegen )
 
         # atomic summation of aggregates
-        with IfClause ( andLogic( ctxt.vars.activeVar, notEquals( bucketVar, intConst(-1) ) ) if self.algExpr.doGroup
-                        else ctxt.vars.activeVar, ctxt.codegen ):
+        if ctxt.codegen.currentKernel.doGroup and ctxt.codegen.currentKernel.doCg:
+         emit ( "cg::thread_block cta = cg::this_thread_block()", ctxt.codegen )
+         emit ( "cg::thread_block_tile<32> tile32 = cg::tiled_partition<32>(cta)", ctxt.codegen )
+         emit ( "unsigned int group_mask_cg = tile32.match_any(bucket)", ctxt.codegen )
+
+        with IfClause ( andLogic( ctxt.vars.activeVar, notEquals( bucketVar, intConst(-1) ) ) if self.algExpr.doGroup else ctxt.vars.activeVar, ctxt.codegen ):
+            if ctxt.codegen.currentKernel.doGroup and ctxt.codegen.currentKernel.doCg:
+                emit ( "cooperative_groups::coalesced_group g = cooperative_groups::coalesced_threads()", ctxt.codegen )
+                emit ( "cooperative_groups::coalesced_group subtile = cooperative_groups::labeled_partition(g, group_mask_cg)", ctxt.codegen )
+                emit_wi_simicolon ( "if (subtile.thread_rank() == 0 /*leader lane*/) {" , ctxt.codegen )
+
             for id, (inId, reduction) in self.algExpr.aggregateTuples.items():
                 typ = ctxt.codegen.langType ( self.algExpr.aggregateAttributes[id].dataType )
                 agg = addressof ( htmem.accessAggregationAttribute ( id, bucketVar ) )
@@ -510,6 +519,8 @@ class AggregationTranslator ( UnaryTranslator ):
                 if reduction == Reduction.COUNT:
                     sys.stdout.flush()
                     atomAdd = atomicAdd ( agg, cast ( typ, intConst(1) ) )
+                    if ctxt.codegen.currentKernel.doGroup and ctxt.codegen.currentKernel.doCg:
+                        atomAdd = atomicAdd(agg, cast(typ, "(subtile.size())"))
                     atomAddDeviceFunction = atomicAdd ( aggDeviceFunction, cast ( typ, intConst( GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER + str(id) ) ) )
                     if inId in ctxt.attFile.isNullFile:
                         with IfClause ( notLogic ( ctxt.attFile.isNullFile [ inId ] ), ctxt.codegen ):
@@ -522,6 +533,8 @@ class AggregationTranslator ( UnaryTranslator ):
                             emit( atomAddDeviceFunction, ctxt.codegen.currentDeviceFunction )
                     continue
                 val = cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) )
+                if ctxt.codegen.currentKernel.doGroup and ctxt.codegen.currentKernel.doCg:
+                    val = cast ( typ, "(subtile.size())" )
                 valDeviceFunction = cast ( typ, intConst(GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER + str(id) ) )
                 # min
                 if reduction == Reduction.MIN:
@@ -543,6 +556,9 @@ class AggregationTranslator ( UnaryTranslator ):
                     emit ( atomicAdd ( agg, val ), ctxt.codegen )
                     if self.algExpr.doGroup:
                         emit( atomicAdd( aggDeviceFunction, valDeviceFunction ), ctxt.codegen.currentDeviceFunction )
+
+            if ctxt.codegen.currentKernel.doGroup and ctxt.codegen.currentKernel.doCg:
+                emit_wi_simicolon ( "}", ctxt.codegen )
 
         self.htmem = htmem
 

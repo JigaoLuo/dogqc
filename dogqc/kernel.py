@@ -107,6 +107,7 @@ class Kernel ( object ):
         self.kernelName = name
         self.annotations = []
         self.doGroup = False # if doGroup== True, then generate shared memory stuff inside of kernel as well as <<<,,>>> function call
+        self.doCg = True # if true, use cg instead of atomicAdd in all threads.
         self.initVar_Map = {}
         self.deviceFunctionId = None
 
