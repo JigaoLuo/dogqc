@@ -113,6 +113,7 @@ class PipelineAttributesFile ( object ):
     def __init__ ( self, algebraContext, vars, codegen ):
         self.codegen = codegen
         self.algCtxt = algebraContext
+        self.database = algebraContext.ctxt.databas
         self.vars = vars
 
         # attribute variable in register
@@ -133,8 +134,8 @@ class PipelineAttributesFile ( object ):
         self.itmSourceAttributes = dict()
     
     def file ( self, var ):
-        return 'mmdb/' + var.get()
-   
+        return self.database.file(var)
+
     def mapInputAttribute ( self, attr, table ):
         dbIdent = table ["name"] + "_" + attr.name
         attIdent = ident.iatt ( attr )
