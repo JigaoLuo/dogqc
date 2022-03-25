@@ -17,7 +17,8 @@ import dogqc.scalarAlgebra as scal
 from dogqc.kernel import KernelCall
 from dogqc.hashJoins import EquiJoinTranslator 
 
-KernelCall.defaultGridSize = 920
+# SM of 3090 = 82
+KernelCall.defaultGridSize = 1640
 KernelCall.defaultBlockSize = 128
 EquiJoinTranslator.usePushDownJoin = True
 

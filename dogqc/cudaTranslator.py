@@ -113,7 +113,7 @@ class PipelineAttributesFile ( object ):
     def __init__ ( self, algebraContext, vars, codegen ):
         self.codegen = codegen
         self.algCtxt = algebraContext
-        self.database = algebraContext.ctxt.databas
+        self.database = algebraContext.ctxt.database
         self.vars = vars
 
         # attribute variable in register
