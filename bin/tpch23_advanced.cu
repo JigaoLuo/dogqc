@@ -27,8 +27,8 @@ __device__ bool operator==(const apayl2& lhs, const apayl2& rhs) {
 }
 
 constexpr int SHARED_MEMORY_HT_SIZE = 1024;  /// In shared memory
-constexpr int LINEITEM_SIZE = 6001215;       /// SF1
-//constexpr int LINEITEM_SIZE = 59986052;      /// SF10, change the folder name to sf10
+//constexpr int LINEITEM_SIZE = 6001215; const std::string file_path = "mmdb/tpch-dbgen/lineitem_l_linenumber";      /// SF1
+constexpr int LINEITEM_SIZE = 59986052;  const std::string file_path = "mmdb/tpch-dbgen-sf10/lineitem_l_linenumber";     /// SF10
 constexpr int GLOBAL_HT_SIZE = LINEITEM_SIZE * 2;  /// In global memory
 //constexpr int GLOBAL_HT_SIZE = 8192;  /// In global memory
 
@@ -236,7 +236,7 @@ __global__ void krnl_reduce(
 
 int main() {
     int* iatt5_llinenum;
-    iatt5_llinenum = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_linenumber" );
+    iatt5_llinenum = ( int*) map_memory_file ( file_path.c_str() );
 
     int nout_result;
     std::vector < int > oatt5_llinenum(LINEITEM_SIZE);
@@ -353,7 +353,7 @@ int main() {
         const int shared_memory_usage = (sizeof(agg_ht_sm<apayl2>) + sizeof(int)) * SHARED_MEMORY_HT_SIZE;
         std::cout << "Shared memory usage: " << shared_memory_usage << " bytes" << std::endl;
         cudaFuncSetAttribute(krnl_lineitem1, cudaFuncAttributeMaxDynamicSharedMemorySize, /*65536*/ shared_memory_usage);
-        krnl_lineitem1<<<gridsize, blocksize, shared_memory_usage>>>(d_iatt5_llinenum, d_aht2, d_agg1);
+        krnl_lineitem1<<<220, blocksize, shared_memory_usage>>>(d_iatt5_llinenum, d_aht2, d_agg1);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_lineitem11 = std::clock();
@@ -369,7 +369,7 @@ int main() {
     {
         int gridsize=920;
         int blocksize=128;
-        krnl_reduce<<<gridsize, blocksize>>>(d_aht2, d_agg1, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
+        krnl_reduce<<<220, blocksize>>>(d_aht2, d_agg1, d_nout_result, d_oatt5_llinenum, d_oatt1_countlli);
     }
     cudaDeviceSynchronize();
     std::clock_t stop_krnl_reduce2 = std::clock();

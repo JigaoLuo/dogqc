@@ -406,6 +406,18 @@ __device__ void initSMAggArray ( T* ht, int SHARED_MEMORY_HT_SIZE ) {
     }
 }
 
+template <typename T>
+__device__ void initSMAggArray ( T* ht, int SHARED_MEMORY_HT_SIZE, T default_value = 0 ) {
+    /// Init array in shared memory.
+    int index;
+    unsigned loopVar = threadIdx.x;  ///
+    unsigned step = blockDim.x;  ///
+    while(loopVar < SHARED_MEMORY_HT_SIZE) {
+        index = loopVar;
+        ht[index] = default_value;
+        loopVar += step;
+    }
+}
 
 // returns candidate bucket
 template <typename T>
