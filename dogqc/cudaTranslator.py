@@ -516,21 +516,25 @@ class AggregationTranslator ( UnaryTranslator ):
                     # min
                     if reduction == Reduction.MIN:
                         right_value = "NO CUDA CG FOR MIN"
-                        Variable.val(typ, ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce", ctxt.codegen, right_value)
+                        assignment = typ + " " + ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce" + " = " + right_value
+                        emit(assignment, ctxt.codegen)
                     # max
                     elif reduction == Reduction.MAX:
                         right_value = "NO CUDA CG FOR MAX"
-                        Variable.val(typ, ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce", ctxt.codegen, right_value)
+                        assignment = typ + " " + ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce" + " = " + right_value
+                        emit(assignment, ctxt.codegen)
                     # sum
                     elif reduction == Reduction.SUM:
                         right_value = "cg::reduce(subtile, " + cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) ) \
                                       + ", cg::plus<" + typ + ">())"
-                        Variable.val(typ, ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce", ctxt.codegen, right_value)
+                        assignment = typ + " " + ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce" + " = " + right_value
+                        emit(assignment, ctxt.codegen)
                     # avg
                     elif reduction == Reduction.AVG:
                         right_value = "cg::reduce(subtile, " + cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) ) \
                                       + ", cg::plus<" + typ + ">())"
-                        Variable.val(typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) + "_cg_reduce", ctxt.codegen, right_value)
+                        assignment = typ + " " + ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce" + " = " + right_value
+                        emit(assignment, ctxt.codegen)
 
                 emit_wi_simicolon ( "if (subtile.thread_rank() == 0 /*leader lane*/) {" , ctxt.codegen )
 
