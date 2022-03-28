@@ -19,6 +19,7 @@ def getIncludes ():
 def getCudaIncludes ():
     code = Code()
     code.add("#include <cooperative_groups.h>")
+    code.add("#include <cooperative_groups/reduce.h>")
     code.add("namespace cg = cooperative_groups;")
     code.add("#include \"../dogqc/include/util.cuh\"")
     code.add("#include \"../dogqc/include/hashing.cuh\"")

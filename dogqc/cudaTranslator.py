@@ -507,8 +507,31 @@ class AggregationTranslator ( UnaryTranslator ):
 
         with IfClause ( andLogic( ctxt.vars.activeVar, notEquals( bucketVar, intConst(-1) ) ) if self.algExpr.doGroup else ctxt.vars.activeVar, ctxt.codegen ):
             if ctxt.codegen.currentKernel.doGroup and ctxt.codegen.currentKernel.doCg:
-                emit ( "cooperative_groups::coalesced_group g = cooperative_groups::coalesced_threads()", ctxt.codegen )
-                emit ( "cooperative_groups::coalesced_group subtile = cooperative_groups::labeled_partition(g, group_mask_cg)", ctxt.codegen )
+                emit ( "cg::coalesced_group g = cg::coalesced_threads()", ctxt.codegen )
+                emit ( "cg::coalesced_group subtile = cg::labeled_partition(g, group_mask_cg)", ctxt.codegen )
+                # CG Reduce for non-counting aggregations.
+                #             TYPE NAME__ = cg::reduce(subtile, (float)NAME, cg::plus<float>());
+                for id, (inId, reduction) in self.algExpr.aggregateTuples.items():
+                    typ = ctxt.codegen.langType(self.algExpr.aggregateAttributes[id].dataType)
+                    # min
+                    if reduction == Reduction.MIN:
+                        right_value = "NO CUDA CG FOR MIN"
+                        Variable.val(typ, ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce", ctxt.codegen, right_value)
+                    # max
+                    elif reduction == Reduction.MAX:
+                        right_value = "NO CUDA CG FOR MAX"
+                        Variable.val(typ, ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce", ctxt.codegen, right_value)
+                    # sum
+                    elif reduction == Reduction.SUM:
+                        right_value = "cg::reduce(subtile, " + cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) ) \
+                                      + ", cg::plus<" + typ + ">())"
+                        Variable.val(typ, ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce", ctxt.codegen, right_value)
+                    # avg
+                    elif reduction == Reduction.AVG:
+                        right_value = "cg::reduce(subtile, " + cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) ) \
+                                      + ", cg::plus<" + typ + ">())"
+                        Variable.val(typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) + "_cg_reduce", ctxt.codegen, right_value)
+
                 emit_wi_simicolon ( "if (subtile.thread_rank() == 0 /*leader lane*/) {" , ctxt.codegen )
 
             for id, (inId, reduction) in self.algExpr.aggregateTuples.items():
@@ -534,7 +557,10 @@ class AggregationTranslator ( UnaryTranslator ):
                     continue
                 val = cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) )
                 if ctxt.codegen.currentKernel.doGroup and ctxt.codegen.currentKernel.doCg:
-                    val = cast ( typ, "(subtile.size())" )
+                    if reduction == Reduction.COUNT:
+                        val = cast ( typ, "(subtile.size())" )
+                    else:
+                        val = cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) + "_cg_reduce" )
                 valDeviceFunction = cast ( typ, intConst(GROUPBY_AGGREGATION_VARIABLE_PLACEHOLDER + str(id) ) )
                 # min
                 if reduction == Reduction.MIN:
