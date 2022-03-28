@@ -23,8 +23,8 @@ __device__ bool operator==(const apayl5& lhs, const apayl5& rhs) {
 }
 
 constexpr int SHARED_MEMORY_HT_SIZE = 100;   /// In shared memory
-//constexpr int LINEITEM_SIZE = 6001215;       /// SF1
-constexpr int LINEITEM_SIZE = 59986052;      /// SF10, change the folder name to sf100
+constexpr int LINEITEM_SIZE = 6001215;       /// SF1
+//constexpr int LINEITEM_SIZE = 59986052;      /// SF10, change the folder name to sf100
 
 __device__ void sm_to_gm(
     agg_ht_sm<apayl5>* aht5, double* agg1, double* agg2, double* agg3, double* agg4, double* agg5, double* agg6, double* agg7, int* agg8, agg_ht<apayl5>* g_aht5, double* g_agg1, double* g_agg2, double* g_agg3, double* g_agg4, double* g_agg5, double* g_agg6, double* g_agg7, int* g_agg8) {
@@ -241,37 +241,48 @@ __global__ void krnl_lineitem1(
 //                }
 //            }
 
-//            unsigned laneid; asm volatile ("mov.u32 %0, %laneid;" : "=r"(laneid));
-            cooperative_groups::coalesced_group g = cooperative_groups::coalesced_threads();
-            assert (group_mask == group_mask_cg);
-            cooperative_groups::coalesced_group subtile = cooperative_groups::labeled_partition(g, group_mask);
-            int s = subtile.size();
-            int r = subtile.thread_rank();
-            for (int offset = 32 / 2; offset > 0; offset /= 2) {
-                auto att13_lquantit_shfl = subtile.shfl_down(att13_lquantit, offset);
-                auto att14_lextende_shfl = subtile.shfl_down(att14_lextende, offset);
-                auto att26_discpric_shfl = subtile.shfl_down(att26_discpric, offset);
-                auto att25_charge_shfl   = subtile.shfl_down(att25_charge, offset);
-                auto att15_ldiscoun_shfl = subtile.shfl_down(att15_ldiscoun, offset);
-                if (r + offset < s) {
-                    att13_lquantit += att13_lquantit_shfl;
-                    att14_lextende += att14_lextende_shfl;
-                    att26_discpric += att26_discpric_shfl;
-                    att25_charge   += att25_charge_shfl;
-                    att15_ldiscoun += att15_ldiscoun_shfl;
-                }
-            }
-            if (subtile.thread_rank() == 0 /*leader lane*/) {
-//            if (laneid == elected_lane) {
-                atomicAdd(&(agg1[bucket]), ((double)att13_lquantit));
-                atomicAdd(&(agg2[bucket]), ((double)att14_lextende));
-                atomicAdd(&(agg3[bucket]), ((double)att26_discpric));
-                atomicAdd(&(agg4[bucket]), ((double)att25_charge));
-                atomicAdd(&(agg5[bucket]), ((double)att13_lquantit));
-                atomicAdd(&(agg6[bucket]), ((double)att14_lextende));
-                atomicAdd(&(agg7[bucket]), ((double)att15_ldiscoun));
-                atomicAdd(&(agg8[bucket]), ((int) subtile.size() ));
-            }
+////            unsigned laneid; asm volatile ("mov.u32 %0, %laneid;" : "=r"(laneid));
+//            cooperative_groups::coalesced_group g = cooperative_groups::coalesced_threads();
+//            assert (group_mask == group_mask_cg);
+//            cooperative_groups::coalesced_group subtile = cooperative_groups::labeled_partition(g, group_mask);
+//            int s = subtile.size();
+//            int r = subtile.thread_rank();
+//            for (int offset = 32 / 2; offset > 0; offset /= 2) {
+//                auto att13_lquantit_shfl = subtile.shfl_down(att13_lquantit, offset);
+//                auto att14_lextende_shfl = subtile.shfl_down(att14_lextende, offset);
+//                auto att26_discpric_shfl = subtile.shfl_down(att26_discpric, offset);
+//                auto att25_charge_shfl   = subtile.shfl_down(att25_charge, offset);
+//                auto att15_ldiscoun_shfl = subtile.shfl_down(att15_ldiscoun, offset);
+//                if (r + offset < s) {
+//                    att13_lquantit += att13_lquantit_shfl;
+//                    att14_lextende += att14_lextende_shfl;initSMAggArray
+//                    att26_discpric += att26_discpric_shfl;
+//                    att25_charge   += att25_charge_shfl;
+//                    att15_ldiscoun += att15_ldiscoun_shfl;
+//                }
+//            }
+//            if (subtile.thread_rank() == 0 /*leader lane*/) {
+////            if (laneid == elected_lane) {
+//                atomicAdd(&(agg1[bucket]), ((double)att13_lquantit));
+////                atomicAdd(&(agg2[bucket]), ((double)att14_lextende));
+////                atomicAdd(&(agg3[bucket]), ((double)att26_discpric))initSMAggArray;
+////                atomicAdd(&(agg4[bucket]), ((double)att25_charge));
+////                atomicAdd(&(agg5[bucket]), ((double)att13_lquantit));
+////                atomicAdd(&(agg6[bucket]), ((double)att14_lextende));
+////                atomicAdd(&(agg7[bucket]), ((double)att15_ldiscoun));
+////                atomicAdd(&(agg8[bucket]), ((int) subtile.size() ));
+//            }
+        }
+
+        if(active && bucket != -1) {
+            atomicAdd(&(agg8[bucket]), ((int)1));
+            atomicAdd(&(agg1[bucket]), ((double)att13_lquantit));
+            atomicAdd(&(agg2[bucket]), ((double)att14_lextende));
+            atomicAdd(&(agg3[bucket]), ((double)att26_discpric));
+            atomicAdd(&(agg4[bucket]), ((double)att25_charge));
+            atomicAdd(&(agg5[bucket]), ((double)att13_lquantit));
+            atomicAdd(&(agg6[bucket]), ((double)att14_lextende));
+            atomicAdd(&(agg7[bucket]), ((double)att15_ldiscoun));
         }
 
         __syncthreads();
@@ -378,19 +389,19 @@ __global__ void krnl_aggregation5(
 
 int main() {
     int* iatt13_lquantit;
-    iatt13_lquantit = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf10/lineitem_l_quantity" );
+    iatt13_lquantit = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_quantity" );
     float* iatt14_lextende;
-    iatt14_lextende = ( float*) map_memory_file ( "mmdb/tpch-dbgen-sf10/lineitem_l_extendedprice" );
+    iatt14_lextende = ( float*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_extendedprice" );
     float* iatt15_ldiscoun;
-    iatt15_ldiscoun = ( float*) map_memory_file ( "mmdb/tpch-dbgen-sf10/lineitem_l_discount" );
+    iatt15_ldiscoun = ( float*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_discount" );
     float* iatt16_ltax;
-    iatt16_ltax = ( float*) map_memory_file ( "mmdb/tpch-dbgen-sf10/lineitem_l_tax" );
+    iatt16_ltax = ( float*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_tax" );
     char* iatt17_lreturnf;
-    iatt17_lreturnf = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf10/lineitem_l_returnflag" );
+    iatt17_lreturnf = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_returnflag" );
     char* iatt18_llinesta;
-    iatt18_llinesta = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf10/lineitem_l_linestatus" );
+    iatt18_llinesta = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_linestatus" );
     unsigned* iatt19_lshipdat;
-    iatt19_lshipdat = ( unsigned*) map_memory_file ( "mmdb/tpch-dbgen-sf10/lineitem_l_shipdate" );
+    iatt19_lshipdat = ( unsigned*) map_memory_file ( "mmdb/tpch-dbgen-sf1/lineitem_l_shipdate" );
 
     int nout_result;
     std::vector < char > oatt17_lreturnf(100);
