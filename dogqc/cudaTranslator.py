@@ -510,32 +510,41 @@ class AggregationTranslator ( UnaryTranslator ):
                 emit ( "cg::coalesced_group g = cg::coalesced_threads()", ctxt.codegen )
                 emit ( "cg::coalesced_group subtile = cg::labeled_partition(g, group_mask_cg)", ctxt.codegen )
                 # CG Reduce for non-counting aggregations.
-                #             TYPE NAME__ = cg::reduce(subtile, (float)NAME, cg::plus<float>());
+                cg_reduce_set = set()
                 for id, (inId, reduction) in self.algExpr.aggregateTuples.items():
                     typ = ctxt.codegen.langType(self.algExpr.aggregateAttributes[id].dataType)
                     # min
                     if reduction == Reduction.MIN:
-                        right_value = "NO CUDA CG FOR MIN"
+                        right_value = "cg::reduce(subtile, " + cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) ) \
+                                      + ", cg::less<" + typ + ">())"
                         assignment = typ + " " + ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce" + " = " + right_value
-                        emit(assignment, ctxt.codegen)
+                        if ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) not in cg_reduce_set:
+                            emit(assignment, ctxt.codegen)
+                            cg_reduce_set.add(ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]))
                     # max
                     elif reduction == Reduction.MAX:
-                        right_value = "NO CUDA CG FOR MAX"
+                        right_value = "cg::reduce(subtile, " + cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) ) \
+                                      + ", cg::greater<" + typ + ">())"
                         assignment = typ + " " + ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce" + " = " + right_value
-                        emit(assignment, ctxt.codegen)
+                        if ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) not in cg_reduce_set:
+                            emit(assignment, ctxt.codegen)
+                            cg_reduce_set.add(ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]))
                     # sum
                     elif reduction == Reduction.SUM:
                         right_value = "cg::reduce(subtile, " + cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) ) \
                                       + ", cg::plus<" + typ + ">())"
                         assignment = typ + " " + ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce" + " = " + right_value
-                        emit(assignment, ctxt.codegen)
+                        if ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) not in cg_reduce_set:
+                            emit(assignment, ctxt.codegen)
+                            cg_reduce_set.add(ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]))
                     # avg
                     elif reduction == Reduction.AVG:
                         right_value = "cg::reduce(subtile, " + cast ( typ, ctxt.attFile.access ( self.algExpr.aggregateInAttributes[inId] ) ) \
                                       + ", cg::plus<" + typ + ">())"
                         assignment = typ + " " + ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) + "_cg_reduce" + " = " + right_value
-                        emit(assignment, ctxt.codegen)
-
+                        if ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]) not in cg_reduce_set:
+                            emit(assignment, ctxt.codegen)
+                            cg_reduce_set.add(ctxt.attFile.access(self.algExpr.aggregateInAttributes[inId]))
                 emit_wi_simicolon ( "if (subtile.thread_rank() == 0 /*leader lane*/) {" , ctxt.codegen )
 
             for id, (inId, reduction) in self.algExpr.aggregateTuples.items():
