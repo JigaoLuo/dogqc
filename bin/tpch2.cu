@@ -13,10 +13,18 @@
 struct jpayl4 {
     int att2_rregionk;
 };
+__device__ bool operator==(const jpayl4& lhs, const jpayl4& rhs) {
+    return lhs.att2_rregionk == rhs.att2_rregionk;
+}
+
 struct jpayl6 {
     int att5_nnationk;
     str_t att6_nname;
 };
+__device__ bool operator==(const jpayl6& lhs, const jpayl6& rhs) {
+    return lhs.att5_nnationk == rhs.att5_nnationk && stringEquals(lhs.att6_nname, rhs.att6_nname);
+}
+
 struct jpayl25 {
     str_t att6_nname;
     int att9_ssuppkey;
@@ -26,21 +34,45 @@ struct jpayl25 {
     float att14_sacctbal;
     str_t att15_scomment;
 };
+__device__ bool operator==(const jpayl25& lhs, const jpayl25& rhs) {
+    return stringEquals(lhs.att6_nname, rhs.att6_nname) && lhs.att9_ssuppkey == rhs.att9_ssuppkey && stringEquals(lhs.att10_sname, rhs.att10_sname) && stringEquals(lhs.att11_saddress, rhs.att11_saddress) && stringEquals(lhs.att13_sphone, rhs.att13_sphone) && lhs.att14_sacctbal == rhs.att14_sacctbal && stringEquals(lhs.att15_scomment, rhs.att15_scomment);
+}
+
 struct jpayl10 {
     int att16_rregionk;
 };
+__device__ bool operator==(const jpayl10& lhs, const jpayl10& rhs) {
+    return lhs.att16_rregionk == rhs.att16_rregionk;
+}
+
 struct jpayl12 {
     int att19_nnationk;
 };
+__device__ bool operator==(const jpayl12& lhs, const jpayl12& rhs) {
+    return lhs.att19_nnationk == rhs.att19_nnationk;
+}
+
 struct jpayl17 {
     int att23_ssuppkey;
 };
+__device__ bool operator==(const jpayl17& lhs, const jpayl17& rhs) {
+    return lhs.att23_ssuppkey == rhs.att23_ssuppkey;
+}
+
 struct jpayl16 {
     int att30_ppartkey;
 };
+__device__ bool operator==(const jpayl16& lhs, const jpayl16& rhs) {
+    return lhs.att30_ppartkey == rhs.att30_ppartkey;
+}
+
 struct apayl18 {
     int att39_pspartke;
 };
+__device__ bool operator==(const apayl18& lhs, const apayl18& rhs) {
+    return lhs.att39_pspartke == rhs.att39_pspartke;
+}
+
 struct jpayl21 {
     int att39_pspartke;
     float att1_minsuppl;
@@ -602,8 +634,11 @@ __global__ void krnl_partsupp15(
             int numLookups16 = 0;
             int location16 = 0;
             int filterMatch16 = 0;
+            jpayl16 payl16;
+            payl16.att30_ppartkey = att30_ppartkey;
             int activeProbe16 = 1;
             while((!(filterMatch16) && activeProbe16)) {
+//                activeProbe16 = hashAggregateFindBucket ( jht16, 400000, hash16, numLookups16, location16, &(payl16));
                 activeProbe16 = hashAggregateFindBucket ( jht16, 400000, hash16, numLookups16, location16);
                 if(activeProbe16) {
                     jpayl16 probepayl = jht16[location16].payload;
@@ -1160,87 +1195,87 @@ __global__ void krnl_partsupp222(
 
 int main() {
     int* iatt2_rregionk;
-    iatt2_rregionk = ( int*) map_memory_file ( "mmdb/region_r_regionkey" );
+    iatt2_rregionk = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/region_r_regionkey" );
     size_t* iatt3_rname_offset;
-    iatt3_rname_offset = ( size_t*) map_memory_file ( "mmdb/region_r_name_offset" );
+    iatt3_rname_offset = ( size_t*) map_memory_file ( "mmdb/tpch-dbgen-sf1/region_r_name_offset" );
     char* iatt3_rname_char;
-    iatt3_rname_char = ( char*) map_memory_file ( "mmdb/region_r_name_char" );
+    iatt3_rname_char = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/region_r_name_char" );
     int* iatt5_nnationk;
-    iatt5_nnationk = ( int*) map_memory_file ( "mmdb/nation_n_nationkey" );
+    iatt5_nnationk = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/nation_n_nationkey" );
     size_t* iatt6_nname_offset;
-    iatt6_nname_offset = ( size_t*) map_memory_file ( "mmdb/nation_n_name_offset" );
+    iatt6_nname_offset = ( size_t*) map_memory_file ( "mmdb/tpch-dbgen-sf1/nation_n_name_offset" );
     char* iatt6_nname_char;
-    iatt6_nname_char = ( char*) map_memory_file ( "mmdb/nation_n_name_char" );
+    iatt6_nname_char = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/nation_n_name_char" );
     int* iatt7_nregionk;
-    iatt7_nregionk = ( int*) map_memory_file ( "mmdb/nation_n_regionkey" );
+    iatt7_nregionk = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/nation_n_regionkey" );
     int* iatt9_ssuppkey;
-    iatt9_ssuppkey = ( int*) map_memory_file ( "mmdb/supplier_s_suppkey" );
+    iatt9_ssuppkey = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_suppkey" );
     size_t* iatt10_sname_offset;
-    iatt10_sname_offset = ( size_t*) map_memory_file ( "mmdb/supplier_s_name_offset" );
+    iatt10_sname_offset = ( size_t*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_name_offset" );
     char* iatt10_sname_char;
-    iatt10_sname_char = ( char*) map_memory_file ( "mmdb/supplier_s_name_char" );
+    iatt10_sname_char = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_name_char" );
     size_t* iatt11_saddress_offset;
-    iatt11_saddress_offset = ( size_t*) map_memory_file ( "mmdb/supplier_s_address_offset" );
+    iatt11_saddress_offset = ( size_t*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_address_offset" );
     char* iatt11_saddress_char;
-    iatt11_saddress_char = ( char*) map_memory_file ( "mmdb/supplier_s_address_char" );
+    iatt11_saddress_char = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_address_char" );
     int* iatt12_snationk;
-    iatt12_snationk = ( int*) map_memory_file ( "mmdb/supplier_s_nationkey" );
+    iatt12_snationk = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_nationkey" );
     size_t* iatt13_sphone_offset;
-    iatt13_sphone_offset = ( size_t*) map_memory_file ( "mmdb/supplier_s_phone_offset" );
+    iatt13_sphone_offset = ( size_t*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_phone_offset" );
     char* iatt13_sphone_char;
-    iatt13_sphone_char = ( char*) map_memory_file ( "mmdb/supplier_s_phone_char" );
+    iatt13_sphone_char = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_phone_char" );
     float* iatt14_sacctbal;
-    iatt14_sacctbal = ( float*) map_memory_file ( "mmdb/supplier_s_acctbal" );
+    iatt14_sacctbal = ( float*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_acctbal" );
     size_t* iatt15_scomment_offset;
-    iatt15_scomment_offset = ( size_t*) map_memory_file ( "mmdb/supplier_s_comment_offset" );
+    iatt15_scomment_offset = ( size_t*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_comment_offset" );
     char* iatt15_scomment_char;
-    iatt15_scomment_char = ( char*) map_memory_file ( "mmdb/supplier_s_comment_char" );
+    iatt15_scomment_char = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_comment_char" );
     int* iatt16_rregionk;
-    iatt16_rregionk = ( int*) map_memory_file ( "mmdb/region_r_regionkey" );
+    iatt16_rregionk = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/region_r_regionkey" );
     size_t* iatt17_rname_offset;
-    iatt17_rname_offset = ( size_t*) map_memory_file ( "mmdb/region_r_name_offset" );
+    iatt17_rname_offset = ( size_t*) map_memory_file ( "mmdb/tpch-dbgen-sf1/region_r_name_offset" );
     char* iatt17_rname_char;
-    iatt17_rname_char = ( char*) map_memory_file ( "mmdb/region_r_name_char" );
+    iatt17_rname_char = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/region_r_name_char" );
     int* iatt19_nnationk;
-    iatt19_nnationk = ( int*) map_memory_file ( "mmdb/nation_n_nationkey" );
+    iatt19_nnationk = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/nation_n_nationkey" );
     int* iatt21_nregionk;
-    iatt21_nregionk = ( int*) map_memory_file ( "mmdb/nation_n_regionkey" );
+    iatt21_nregionk = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/nation_n_regionkey" );
     int* iatt23_ssuppkey;
-    iatt23_ssuppkey = ( int*) map_memory_file ( "mmdb/supplier_s_suppkey" );
+    iatt23_ssuppkey = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_suppkey" );
     int* iatt26_snationk;
-    iatt26_snationk = ( int*) map_memory_file ( "mmdb/supplier_s_nationkey" );
+    iatt26_snationk = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/supplier_s_nationkey" );
     int* iatt30_ppartkey;
-    iatt30_ppartkey = ( int*) map_memory_file ( "mmdb/part_p_partkey" );
+    iatt30_ppartkey = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/part_p_partkey" );
     size_t* iatt34_ptype_offset;
-    iatt34_ptype_offset = ( size_t*) map_memory_file ( "mmdb/part_p_type_offset" );
+    iatt34_ptype_offset = ( size_t*) map_memory_file ( "mmdb/tpch-dbgen-sf1/part_p_type_offset" );
     char* iatt34_ptype_char;
-    iatt34_ptype_char = ( char*) map_memory_file ( "mmdb/part_p_type_char" );
+    iatt34_ptype_char = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/part_p_type_char" );
     int* iatt35_psize;
-    iatt35_psize = ( int*) map_memory_file ( "mmdb/part_p_size" );
+    iatt35_psize = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/part_p_size" );
     int* iatt39_pspartke;
-    iatt39_pspartke = ( int*) map_memory_file ( "mmdb/partsupp_ps_partkey" );
+    iatt39_pspartke = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/partsupp_ps_partkey" );
     int* iatt40_pssuppke;
-    iatt40_pssuppke = ( int*) map_memory_file ( "mmdb/partsupp_ps_suppkey" );
+    iatt40_pssuppke = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/partsupp_ps_suppkey" );
     float* iatt42_pssupply;
-    iatt42_pssupply = ( float*) map_memory_file ( "mmdb/partsupp_ps_supplycost" );
+    iatt42_pssupply = ( float*) map_memory_file ( "mmdb/tpch-dbgen-sf1/partsupp_ps_supplycost" );
     int* iatt44_ppartkey;
-    iatt44_ppartkey = ( int*) map_memory_file ( "mmdb/part_p_partkey" );
+    iatt44_ppartkey = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/part_p_partkey" );
     size_t* iatt46_pmfgr_offset;
-    iatt46_pmfgr_offset = ( size_t*) map_memory_file ( "mmdb/part_p_mfgr_offset" );
+    iatt46_pmfgr_offset = ( size_t*) map_memory_file ( "mmdb/tpch-dbgen-sf1/part_p_mfgr_offset" );
     char* iatt46_pmfgr_char;
-    iatt46_pmfgr_char = ( char*) map_memory_file ( "mmdb/part_p_mfgr_char" );
+    iatt46_pmfgr_char = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/part_p_mfgr_char" );
     size_t* iatt48_ptype_offset;
-    iatt48_ptype_offset = ( size_t*) map_memory_file ( "mmdb/part_p_type_offset" );
+    iatt48_ptype_offset = ( size_t*) map_memory_file ( "mmdb/tpch-dbgen-sf1/part_p_type_offset" );
     char* iatt48_ptype_char;
-    iatt48_ptype_char = ( char*) map_memory_file ( "mmdb/part_p_type_char" );
+    iatt48_ptype_char = ( char*) map_memory_file ( "mmdb/tpch-dbgen-sf1/part_p_type_char" );
     int* iatt49_psize;
-    iatt49_psize = ( int*) map_memory_file ( "mmdb/part_p_size" );
+    iatt49_psize = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/part_p_size" );
     int* iatt53_pspartke;
-    iatt53_pspartke = ( int*) map_memory_file ( "mmdb/partsupp_ps_partkey" );
+    iatt53_pspartke = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/partsupp_ps_partkey" );
     int* iatt54_pssuppke;
-    iatt54_pssuppke = ( int*) map_memory_file ( "mmdb/partsupp_ps_suppkey" );
+    iatt54_pssuppke = ( int*) map_memory_file ( "mmdb/tpch-dbgen-sf1/partsupp_ps_suppkey" );
     float* iatt56_pssupply;
-    iatt56_pssupply = ( float*) map_memory_file ( "mmdb/partsupp_ps_supplycost" );
+    iatt56_pssupply = ( float*) map_memory_file ( "mmdb/tpch-dbgen-sf1/partsupp_ps_supplycost" );
 
     int nout_result;
     std::vector < float > oatt14_sacctbal(800000);
